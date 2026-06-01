@@ -31,10 +31,6 @@ export function MatchDetail() {
   const region = searchParams.get("region") ?? "br1";
   const puuid = searchParams.get("puuid") ?? "";
 
-  if (!matchId) {
-    return <p className="search-error">Match ID não fornecido.</p>;
-  }
-
   const [match, setMatch] = useState<MatchDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +53,7 @@ export function MatchDetail() {
         setLoading(false);
       }
     }
-    load();
+    if (matchId) load();
   }, [matchId, region]);
 
   if (loading) return <p>Carregando...</p>;

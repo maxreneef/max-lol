@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\" -ErrorAction SilentlyContinue; if \\(-not \\(Test-Path \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\"\\)\\) { \"Directory does not exist\" } else { \"Directory exists\" })"
+    ]
+  }
+}
