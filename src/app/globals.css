@@ -401,3 +401,165 @@ a:hover {
   background: rgba(200, 155, 60, 0.15);
   color: var(--accent);
 }
+
+/* Match History */
+.match-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.match-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color 0.2s;
+}
+
+.match-item:hover {
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+.match-item .match-id {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.match-item .arrow {
+  color: var(--muted);
+}
+
+/* Match Detail */
+.match-detail {
+  margin-top: 1.5rem;
+}
+
+.match-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+.team-summary {
+  text-align: center;
+}
+
+.team-summary h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.4rem;
+  color: var(--muted);
+}
+
+.team-summary.winner h2 {
+  color: var(--accent-2);
+}
+
+.team-summary .result {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ff6b6b;
+}
+
+.team-summary.winner .result {
+  color: #51cf66;
+}
+
+.match-info {
+  text-align: center;
+}
+
+.match-info p {
+  margin: 0.3rem 0;
+}
+
+.teams-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.team-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.participant {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.9rem;
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.participant.highlight {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.champion-icon {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.participant-info {
+  min-width: 0;
+}
+
+.participant-info .name {
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.participant-info .tag {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 0.2rem;
+  font-size: 0.9em;
+}
+
+.participant-info .champion {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.participant-info .kda {
+  color: var(--accent-2);
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-top: 0.2rem;
+}
+
+.participant-stats {
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.participant-stats p {
+  margin: 0.1rem 0;
+}
+
+.participant-stats .gold {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.participant-stats .damage {
+  color: #ff6b6b;
+  font-weight: 500;
+}

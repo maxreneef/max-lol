@@ -4,6 +4,8 @@ import { mockProfile } from "./mock";
 import {
   PLATFORMS,
   type LeagueEntryDTO,
+  type MatchDTO,
+  type MatchHistory,
   type Platform,
   type RiotAccount,
   type SummonerDTO,
@@ -109,4 +111,44 @@ export async function getProfile(
 
 export function hasApiKey(): boolean {
   return Boolean(API_KEY);
+}
+
+export async function getMatchHistory(
+  puuid: string,
+  platform: Platform,
+  start: number = 0,
+  count: number = 20
+): Promise<MatchHistory> {
+  if (!API_KEY) {
+    // Mock: retorna IDs fictícios que a busca vai ignorar se não houver chave.
+    return {
+      matchIds: Array.from({ length: count }, (_, i) => `BR1-mock-match-${i}`),
+      count,
+    };
+  }
+
+  const key = `matches:${platform}:${puuid}:${start}-${count}`;
+  return cached(key, 300_000, async () => {
+    const ids = await riotFetch<string[]>(
+      `${regionalHost(platform)}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`
+    );
+    return { matchIds: ids, count: ids.length };
+  });
+}
+
+export async function getMatch(
+  matchId: string,
+  platform: Platform
+): Promise<MatchDTO> {
+  if (!API_KEY) {
+    // Sem chave, retorna erro simulado.
+    throw new RiotError(403, "Chave da API não configurada.");
+  }
+
+  const key = `match:${platform}:${matchId}`;
+  return cached(key, 3_600_000, async () => {
+    return riotFetch<MatchDTO>(
+      `${regionalHost(platform)}/lol/match/v5/matches/${matchId}`
+    );
+  });
 }

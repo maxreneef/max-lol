@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PLATFORMS, type SummonerProfile } from "@/lib/types";
+import Link from "next/link";
+import { PLATFORMS, type SummonerProfile, type MatchHistory } from "@/lib/types";
 
 const QUEUE_LABELS: Record<string, string> = {
   RANKED_SOLO_5x5: "Ranqueada Solo/Duo",
@@ -20,6 +21,27 @@ export function SummonerSearch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<SummonerProfile | null>(null);
+  const [loadingMatches, setLoadingMatches] = useState(false);
+  const [matches, setMatches] = useState<MatchHistory | null>(null);
+
+  async function fetchMatches(profileData: SummonerProfile) {
+    setLoadingMatches(true);
+    try {
+      const res = await fetch(
+        `/api/matches?puuid=${encodeURIComponent(
+          profileData.account.puuid
+        )}&region=${region}&start=0&count=20`
+      );
+      const data = await res.json();
+      if (res.ok) {
+        setMatches(data as MatchHistory);
+      }
+    } catch {
+      console.error("Erro ao buscar histórico");
+    } finally {
+      setLoadingMatches(false);
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -34,7 +56,10 @@ export function SummonerSearch() {
       if (!res.ok) {
         setError(data.error ?? "Erro ao buscar invocador.");
       } else {
-        setProfile(data as SummonerProfile);
+        const profileData = data as SummonerProfile;
+        setProfile(profileData);
+        // Busca histórico de partidas automaticamente
+        fetchMatches(profileData);
       }
     } catch {
       setError("Falha de rede. Tente novamente.");
@@ -120,6 +145,30 @@ export function SummonerSearch() {
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {loadingMatches && (
+            <p style={{ color: "var(--muted)", marginTop: "1.5rem" }}>
+              Carregando histórico de partidas...
+            </p>
+          )}
+
+          {matches && matches.matchIds.length > 0 && (
+            <div style={{ marginTop: "2rem" }}>
+              <h3 className="ranked-title">Últimas partidas</h3>
+              <div className="match-list">
+                {matches.matchIds.map((matchId) => (
+                  <Link
+                    key={matchId}
+                    href={`/match/${matchId}?region=${region}&puuid=${profile.account.puuid}`}
+                    className="match-item"
+                  >
+                    <span className="match-id">{matchId.split("-")[1] ?? matchId}</span>
+                    <span className="arrow">→</span>
+                  </Link>
+                ))}
+              </div>
             </div>
           )}
         </div>

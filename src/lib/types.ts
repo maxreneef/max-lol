@@ -49,3 +49,81 @@ export type Platform = keyof typeof PLATFORMS;
 export function isPlatform(value: string): value is Platform {
   return value in PLATFORMS;
 }
+
+export interface MatchParticipant {
+  summonerId: string;
+  riotIdGameName: string;
+  riotIdTagline: string;
+  championId: number;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  goldEarned: number;
+  totalDamageDealtToChampions: number;
+  visionScore: number;
+  win: boolean;
+  lane: string;
+  role: string;
+}
+
+export interface MatchDTO {
+  metadata: {
+    matchId: string;
+    dataVersion: string;
+    participants: string[];
+  };
+  info: {
+    gameId: number;
+    platformId: string;
+    gameMode: string;
+    gameType: string;
+    gameDuration: number;
+    gameCreation: number;
+    gameEndTimestamp?: number;
+    queueId: number;
+    mapId: number;
+    seasonId: number;
+    teams: Array<{
+      teamId: string;
+      win: boolean;
+      bans: Array<{ championId: number; pickTurn: number }>;
+      objectives: {
+        baron: { first: boolean; kills: number };
+        champion: { first: boolean; kills: number };
+        dragon: { first: boolean; kills: number };
+        inhibitor: { first: boolean; kills: number };
+        riftHerald: { first: boolean; kills: number };
+        tower: { first: boolean; kills: number };
+      };
+    }>;
+    participants: Array<{
+      puuid: string;
+      summonerId: string;
+      summonerName: string;
+      riotIdGameName: string;
+      riotIdTagline: string;
+      championId: number;
+      championName: string;
+      championTransform: number;
+      deaths: number;
+      assists: number;
+      kills: number;
+      lane: string;
+      role: string;
+      teamId: string;
+      win: boolean;
+      goldEarned: number;
+      totalDamageDealtToChampions: number;
+      visionScore: number;
+      itemIds?: number[];
+      primaryRuneId?: number;
+      subRuneId?: number;
+    }>;
+  };
+}
+
+export interface MatchHistory {
+  matchIds: string[];
+  count: number;
+}

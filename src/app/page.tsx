@@ -74,8 +74,14 @@ export default function Home() {
             ranqueadas.
           </li>
           <li>
+            <span className="status-badge status-live">Disponível</span>
+            <strong>Histórico de partidas</strong> — últimas 20 partidas com
+            visualização de detalhes.
+          </li>
+          <li>
             <span className="status-badge status-soon">Em breve</span>
-            <strong>Histórico de partidas</strong> com gráficos de desempenho.
+            <strong>Análise de performance</strong> com gráficos de KDA, ouro e
+            dano por partida.
           </li>
           <li>
             <span className="status-badge status-soon">Em breve</span>
