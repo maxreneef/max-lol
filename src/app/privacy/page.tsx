@@ -77,8 +77,8 @@ export default function Privacy() {
 
       <h2>7. Contato</h2>
       <p>
-        Para dúvidas sobre esta política, entre em contato pelo e-mail informado
-        no portal de desenvolvedor do aplicativo.
+        Para dúvidas sobre esta política, entre em contato pelo e-mail{" "}
+        <a href="mailto:maxreneef@gmail.com">maxreneef@gmail.com</a>.
       </p>
 
       <h2>8. Alterações</h2>

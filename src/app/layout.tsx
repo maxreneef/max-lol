@@ -35,6 +35,7 @@ export default function RootLayout({
             <nav>
               <Link href="/privacy">Política de Privacidade</Link>
               <Link href="/terms">Termos de Uso</Link>
+              <a href="mailto:maxreneef@gmail.com">Contato</a>
             </nav>
           </div>
         </footer>

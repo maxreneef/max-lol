@@ -74,8 +74,8 @@ export default function Terms() {
 
       <h2>7. Contato</h2>
       <p>
-        Dúvidas sobre estes Termos podem ser enviadas pelo e-mail informado no
-        portal de desenvolvedor do aplicativo.
+        Dúvidas sobre estes Termos podem ser enviadas para o e-mail{" "}
+        <a href="mailto:maxreneef@gmail.com">maxreneef@gmail.com</a>.
       </p>
 
       <p className="disclaimer">
