@@ -2,7 +2,12 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { PLATFORMS, type SummonerProfile, type MatchHistory } from "@/lib/types";
+import {
+  PLATFORMS,
+  QUEUE_NAMES,
+  type MatchSummary,
+  type SummonerProfile,
+} from "@/lib/types";
 
 const STORAGE_KEY = "maxlol:recent_searches";
 const MAX_RECENT = 10;
@@ -10,7 +15,6 @@ const MAX_RECENT = 10;
 interface RecentSearch {
   riotId: string;
   region: string;
-  label: string; // "Nome#TAG · BR1"
 }
 
 function loadRecent(): RecentSearch[] {
@@ -22,9 +26,10 @@ function loadRecent(): RecentSearch[] {
 }
 
 function saveSearch(riotId: string, region: string) {
-  const label = `${riotId} · ${region.toUpperCase()}`;
-  const recent = loadRecent().filter((s) => s.label !== label);
-  recent.unshift({ riotId, region, label });
+  const recent = loadRecent().filter(
+    (s) => !(s.riotId === riotId && s.region === region)
+  );
+  recent.unshift({ riotId, region });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
 }
 
@@ -39,6 +44,30 @@ function winRate(wins: number, losses: number): string {
   return `${Math.round((wins / total) * 100)}%`;
 }
 
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
+}
+
+function timeAgo(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 60) return `${mins}m atrás`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h atrás`;
+  const days = Math.floor(hours / 24);
+  return `${days}d atrás`;
+}
+
+function kdaColor(deaths: number, kills: number, assists: number): string {
+  const kda = (kills + assists) / Math.max(deaths, 1);
+  if (kda >= 4) return "#51cf66";
+  if (kda >= 2.5) return "var(--accent-2)";
+  if (kda >= 1.5) return "var(--text)";
+  return "#ff6b6b";
+}
+
 export function SummonerSearch() {
   const [riotId, setRiotId] = useState("");
   const [region, setRegion] = useState("br1");
@@ -46,7 +75,7 @@ export function SummonerSearch() {
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<SummonerProfile | null>(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
-  const [matches, setMatches] = useState<MatchHistory | null>(null);
+  const [summaries, setSummaries] = useState<MatchSummary[] | null>(null);
 
   // Autocomplete
   const [suggestions, setSuggestions] = useState<RecentSearch[]>([]);
@@ -59,7 +88,6 @@ export function SummonerSearch() {
     setRecentAll(loadRecent());
   }, []);
 
-  // Fecha dropdown ao clicar fora
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (
@@ -76,44 +104,36 @@ export function SummonerSearch() {
   function handleInputChange(value: string) {
     setRiotId(value);
     const q = value.toLowerCase().trim();
-    if (q.length === 0) {
-      setSuggestions(recentAll);
-      setShowSuggestions(recentAll.length > 0);
-    } else {
-      const filtered = recentAll.filter((s) =>
-        s.riotId.toLowerCase().includes(q)
-      );
-      setSuggestions(filtered);
-      setShowSuggestions(filtered.length > 0);
-    }
+    const filtered = recentAll.filter((s) =>
+      s.riotId.toLowerCase().includes(q)
+    );
+    setSuggestions(q.length === 0 ? recentAll : filtered);
+    setShowSuggestions((q.length === 0 ? recentAll : filtered).length > 0);
   }
 
   function handleFocus() {
     const recent = loadRecent();
     setRecentAll(recent);
-    if (riotId.trim().length === 0) {
-      setSuggestions(recent);
-      setShowSuggestions(recent.length > 0);
-    }
+    setSuggestions(riotId.trim() ? recent.filter((s) => s.riotId.toLowerCase().includes(riotId.toLowerCase())) : recent);
+    setShowSuggestions(recent.length > 0);
   }
 
   function applySuggestion(s: RecentSearch) {
     setRiotId(s.riotId);
     setRegion(s.region);
     setShowSuggestions(false);
-    inputRef.current?.focus();
+    setTimeout(() => inputRef.current?.focus(), 0);
   }
 
-  async function fetchMatches(profileData: SummonerProfile, reg: string) {
+  async function fetchSummaries(puuid: string, reg: string) {
     setLoadingMatches(true);
+    setSummaries(null);
     try {
       const res = await fetch(
-        `/api/matches?puuid=${encodeURIComponent(
-          profileData.account.puuid
-        )}&region=${reg}&start=0&count=20`
+        `/api/matches/summary?puuid=${encodeURIComponent(puuid)}&region=${reg}&count=20`
       );
       const data = await res.json();
-      if (res.ok) setMatches(data as MatchHistory);
+      if (res.ok) setSummaries(data as MatchSummary[]);
     } catch {
       console.error("Erro ao buscar histórico");
     } finally {
@@ -126,7 +146,7 @@ export function SummonerSearch() {
     setShowSuggestions(false);
     setError(null);
     setProfile(null);
-    setMatches(null);
+    setSummaries(null);
     setLoading(true);
     try {
       const res = await fetch(
@@ -140,7 +160,7 @@ export function SummonerSearch() {
         setProfile(profileData);
         saveSearch(riotId, region);
         setRecentAll(loadRecent());
-        fetchMatches(profileData, region);
+        fetchSummaries(profileData.account.puuid, region);
       }
     } catch {
       setError("Falha de rede. Tente novamente.");
@@ -151,7 +171,7 @@ export function SummonerSearch() {
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className="search-form" style={{ position: "relative" }}>
+      <form onSubmit={handleSubmit} className="search-form">
         <div style={{ position: "relative", flex: "1 1 220px" }}>
           <input
             ref={inputRef}
@@ -170,7 +190,7 @@ export function SummonerSearch() {
               <p className="suggestions-label">Buscas recentes</p>
               {suggestions.map((s) => (
                 <button
-                  key={s.label}
+                  key={`${s.riotId}-${s.region}`}
                   type="button"
                   className="suggestion-item"
                   onMouseDown={() => applySuggestion(s)}
@@ -206,8 +226,7 @@ export function SummonerSearch() {
         <div className="profile-card">
           {profile.source === "mock" && (
             <p className="mock-badge">
-              Dados de demonstração — a chave da API da Riot ainda não está
-              configurada neste ambiente.
+              Dados de demonstração — chave da API da Riot não configurada.
             </p>
           )}
           <div className="profile-header">
@@ -253,29 +272,77 @@ export function SummonerSearch() {
             </div>
           )}
 
-          {loadingMatches && (
-            <p style={{ color: "var(--muted)", marginTop: "1.5rem" }}>
-              Carregando histórico de partidas...
-            </p>
-          )}
+          <div style={{ marginTop: "2rem" }}>
+            <h3 className="ranked-title">Últimas partidas</h3>
 
-          {matches && matches.matchIds.length > 0 && (
-            <div style={{ marginTop: "2rem" }}>
-              <h3 className="ranked-title">Últimas partidas</h3>
-              <div className="match-list">
-                {matches.matchIds.map((matchId) => (
+            {loadingMatches && (
+              <div className="matches-loading">
+                <div className="match-skeleton" />
+                <div className="match-skeleton" />
+                <div className="match-skeleton" />
+              </div>
+            )}
+
+            {summaries && summaries.length > 0 && (
+              <div className="match-list-rich">
+                {summaries.map((s) => (
                   <Link
-                    key={matchId}
-                    href={`/match/${matchId}?region=${region}&puuid=${profile.account.puuid}`}
-                    className="match-item"
+                    key={s.matchId}
+                    href={`/match/${s.matchId}?region=${region}&puuid=${profile.account.puuid}`}
+                    className={`match-card ${s.win ? "match-win" : "match-loss"}`}
                   >
-                    <span className="match-id">{matchId}</span>
-                    <span className="arrow">→</span>
+                    <div className="match-result-bar" />
+                    <img
+                      src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${s.championName}.png`}
+                      alt={s.championName}
+                      width={44}
+                      height={44}
+                      className="match-champ-icon"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <div className="match-card-main">
+                      <p className="match-queue">
+                        {QUEUE_NAMES[s.queueId] ?? s.gameMode}
+                        <span className="match-time">
+                          {" · "}
+                          {timeAgo(s.gameCreation)}
+                        </span>
+                      </p>
+                      <p className="match-champ-name">{s.championName}</p>
+                    </div>
+                    <div className="match-card-kda">
+                      <p
+                        className="match-kda-value"
+                        style={{
+                          color: kdaColor(s.deaths, s.kills, s.assists),
+                        }}
+                      >
+                        {s.kills} / {s.deaths} / {s.assists}
+                      </p>
+                      <p className="match-kda-ratio">
+                        {((s.kills + s.assists) / Math.max(s.deaths, 1)).toFixed(1)}{" "}
+                        KDA
+                      </p>
+                    </div>
+                    <div className="match-card-stats">
+                      <p>{(s.totalDamageDealtToChampions / 1000).toFixed(1)}k dano</p>
+                      <p>{(s.goldEarned / 1000).toFixed(1)}k ouro</p>
+                      <p>{formatDuration(s.gameDuration)}</p>
+                    </div>
+                    <div className={`match-outcome ${s.win ? "win" : "loss"}`}>
+                      {s.win ? "V" : "D"}
+                    </div>
                   </Link>
                 ))}
               </div>
-            </div>
-          )}
+            )}
+
+            {summaries && summaries.length === 0 && (
+              <p style={{ color: "var(--muted)" }}>Sem partidas recentes.</p>
+            )}
+          </div>
         </div>
       )}
     </div>

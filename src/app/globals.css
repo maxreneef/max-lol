@@ -487,6 +487,146 @@ a:hover {
   color: var(--muted);
 }
 
+/* Match list rich cards */
+.match-list-rich {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.match-card {
+  display: grid;
+  grid-template-columns: 4px 44px 1fr auto auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem 0.75rem 0;
+  overflow: hidden;
+  transition: border-color 0.15s;
+  text-decoration: none;
+  color: inherit;
+}
+
+.match-card:hover {
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+.match-result-bar {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 10px 0 0 10px;
+  flex-shrink: 0;
+}
+
+.match-win .match-result-bar {
+  background: #51cf66;
+}
+
+.match-loss .match-result-bar {
+  background: #ff6b6b;
+}
+
+.match-champ-icon {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.match-card-main {
+  min-width: 0;
+}
+
+.match-queue {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.2rem;
+}
+
+.match-time {
+  color: var(--muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.match-champ-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.match-card-kda {
+  text-align: center;
+  min-width: 80px;
+}
+
+.match-kda-value {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.match-kda-ratio {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 0.15rem;
+}
+
+.match-card-stats {
+  text-align: right;
+  font-size: 0.82rem;
+  color: var(--muted);
+  min-width: 80px;
+}
+
+.match-card-stats p {
+  margin: 0.1rem 0;
+}
+
+.match-outcome {
+  font-weight: 800;
+  font-size: 1rem;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.match-outcome.win {
+  color: #51cf66;
+}
+
+.match-outcome.loss {
+  color: #ff6b6b;
+}
+
+/* Loading skeletons */
+.matches-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.match-skeleton {
+  height: 64px;
+  border-radius: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--panel) 25%,
+    var(--border) 50%,
+    var(--panel) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 /* Match Detail */
 .match-detail {
   margin-top: 1.5rem;

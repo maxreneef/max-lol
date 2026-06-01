@@ -127,3 +127,31 @@ export interface MatchHistory {
   matchIds: string[];
   count: number;
 }
+
+export interface MatchSummary {
+  matchId: string;
+  win: boolean;
+  championName: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  totalDamageDealtToChampions: number;
+  goldEarned: number;
+  visionScore: number;
+  queueId: number;
+  gameDuration: number;   // segundos
+  gameCreation: number;   // timestamp ms
+  gameMode: string;
+}
+
+export const QUEUE_NAMES: Record<number, string> = {
+  420: "Solo/Duo",
+  440: "Flex",
+  450: "ARAM",
+  400: "Normal",
+  430: "Normal",
+  700: "Clash",
+  900: "URF",
+  1900: "URF",
+  0: "Custom",
+};

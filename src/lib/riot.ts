@@ -6,6 +6,7 @@ import {
   type LeagueEntryDTO,
   type MatchDTO,
   type MatchHistory,
+  type MatchSummary,
   type Platform,
   type RiotAccount,
   type SummonerDTO,
@@ -133,6 +134,66 @@ export async function getMatchHistory(
       `${regionalHost(platform)}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`
     );
     return { matchIds: ids, count: ids.length };
+  });
+}
+
+export async function getMatchSummaries(
+  puuid: string,
+  platform: Platform,
+  count: number = 20
+): Promise<MatchSummary[]> {
+  if (!API_KEY) {
+    // Mock com dados variados para demonstração
+    const mockChamps = ["Jayce", "Jinx", "Thresh", "Zed", "Lux", "Yasuo"];
+    return Array.from({ length: count }, (_, i) => ({
+      matchId: `BR1_mock_${i}`,
+      win: i % 3 !== 0,
+      championName: mockChamps[i % mockChamps.length],
+      kills: Math.floor(Math.random() * 12),
+      deaths: Math.floor(Math.random() * 8) + 1,
+      assists: Math.floor(Math.random() * 15),
+      totalDamageDealtToChampions: Math.floor(Math.random() * 40000) + 8000,
+      goldEarned: Math.floor(Math.random() * 8000) + 6000,
+      visionScore: Math.floor(Math.random() * 60) + 5,
+      queueId: 420,
+      gameDuration: Math.floor(Math.random() * 1800) + 1200,
+      gameCreation: Date.now() - i * 3_600_000,
+      gameMode: "CLASSIC",
+    }));
+  }
+
+  const key = `summaries:${platform}:${puuid}:${count}`;
+  return cached(key, 120_000, async () => {
+    const ids = await riotFetch<string[]>(
+      `${regionalHost(platform)}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`
+    );
+
+    const summaries: MatchSummary[] = [];
+    for (const matchId of ids) {
+      try {
+        const match = await getMatch(matchId, platform);
+        const p = match.info.participants.find((x) => x.puuid === puuid);
+        if (!p) continue;
+        summaries.push({
+          matchId,
+          win: p.win,
+          championName: p.championName,
+          kills: p.kills,
+          deaths: p.deaths,
+          assists: p.assists,
+          totalDamageDealtToChampions: p.totalDamageDealtToChampions,
+          goldEarned: p.goldEarned,
+          visionScore: p.visionScore,
+          queueId: match.info.queueId,
+          gameDuration: match.info.gameDuration,
+          gameCreation: match.info.gameCreation,
+          gameMode: match.info.gameMode,
+        });
+      } catch {
+        // Ignora partidas com erro e continua
+      }
+    }
+    return summaries;
   });
 }
 
