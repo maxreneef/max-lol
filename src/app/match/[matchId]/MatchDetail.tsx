@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { MatchDTO } from "@/lib/types";
 
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
+// gameDuration vem em SEGUNDOS na API v5
+function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
   return `${mins}m ${secs}s`;
@@ -26,7 +26,6 @@ export function MatchDetail() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Extrai matchId da pathname: /match/[matchId]
   const matchId = pathname.split("/")[2] ?? "";
   const region = searchParams.get("region") ?? "br1";
   const puuid = searchParams.get("puuid") ?? "";
@@ -38,9 +37,7 @@ export function MatchDetail() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch(
-          `/api/matches/${matchId}?region=${region}`
-        );
+        const res = await fetch(`/api/matches/${matchId}?region=${region}`);
         const data = await res.json();
         if (!res.ok) {
           setError(data.error ?? "Erro ao carregar partida.");
@@ -56,17 +53,18 @@ export function MatchDetail() {
     if (matchId) load();
   }, [matchId, region]);
 
-  if (loading) return <p>Carregando...</p>;
+  if (loading) return <p style={{ color: "var(--muted)", padding: "2rem 0" }}>Carregando partida...</p>;
   if (error) return <p className="search-error">{error}</p>;
   if (!match) return <p>Partida não encontrada.</p>;
 
-  const blueTeam = match.info.teams[0];
-  const redTeam = match.info.teams[1];
+  // teamId vem como número (100 / 200) na API v5
+  const blueTeam = match.info.teams.find((t) => Number(t.teamId) === 100) ?? match.info.teams[0];
+  const redTeam = match.info.teams.find((t) => Number(t.teamId) === 200) ?? match.info.teams[1];
   const blueParticipants = match.info.participants.filter(
-    (p) => p.teamId === "100"
+    (p) => Number(p.teamId) === 100
   );
   const redParticipants = match.info.participants.filter(
-    (p) => p.teamId === "200"
+    (p) => Number(p.teamId) === 200
   );
 
   return (
@@ -91,39 +89,25 @@ export function MatchDetail() {
       </div>
 
       <div className="teams-container">
-        <TeamSection
-          participants={blueParticipants}
-          teamId="100"
-          region={region}
-          puuid={puuid}
-        />
-        <TeamSection
-          participants={redParticipants}
-          teamId="200"
-          region={region}
-          puuid={puuid}
-        />
+        <TeamSection participants={blueParticipants} region={region} puuid={puuid} />
+        <TeamSection participants={redParticipants} region={region} puuid={puuid} />
       </div>
 
-      {puuid && (
-        <div style={{ marginTop: "2rem" }}>
-          <Link href={`/summoner?riotId=${puuid}&region=${region}`} className="btn">
-            ← Voltar ao perfil
-          </Link>
-        </div>
-      )}
+      <div style={{ marginTop: "2rem" }}>
+        <Link href="/summoner" className="btn">
+          ← Voltar à busca
+        </Link>
+      </div>
     </div>
   );
 }
 
 function TeamSection({
   participants,
-  teamId,
   region,
   puuid,
 }: {
   participants: any[];
-  teamId: string;
   region: string;
   puuid: string;
 }) {
@@ -140,15 +124,21 @@ function TeamSection({
             width={48}
             height={48}
             className="champion-icon"
+            onError={(e) => {
+              (e.target as HTMLImageElement).style.display = "none";
+            }}
           />
           <div className="participant-info">
             <p className="name">
-              {p.riotIdGameName}
-              <span className="tag">#{p.riotIdTagline}</span>
+              {p.riotIdGameName || p.summonerName}
+              {p.riotIdTagline && (
+                <span className="tag">#{p.riotIdTagline}</span>
+              )}
             </p>
             <p className="champion">{p.championName}</p>
             <p className="kda">
-              <strong>{p.kills}</strong> / {p.deaths} / <strong>{p.assists}</strong>
+              <strong>{p.kills}</strong> / {p.deaths} /{" "}
+              <strong>{p.assists}</strong>
             </p>
           </div>
           <div className="participant-stats">

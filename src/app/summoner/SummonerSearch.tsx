@@ -1,8 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { PLATFORMS, type SummonerProfile, type MatchHistory } from "@/lib/types";
+
+const STORAGE_KEY = "maxlol:recent_searches";
+const MAX_RECENT = 10;
+
+interface RecentSearch {
+  riotId: string;
+  region: string;
+  label: string; // "Nome#TAG · BR1"
+}
+
+function loadRecent(): RecentSearch[] {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveSearch(riotId: string, region: string) {
+  const label = `${riotId} · ${region.toUpperCase()}`;
+  const recent = loadRecent().filter((s) => s.label !== label);
+  recent.unshift({ riotId, region, label });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
+}
 
 const QUEUE_LABELS: Record<string, string> = {
   RANKED_SOLO_5x5: "Ranqueada Solo/Duo",
@@ -24,18 +48,72 @@ export function SummonerSearch() {
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [matches, setMatches] = useState<MatchHistory | null>(null);
 
-  async function fetchMatches(profileData: SummonerProfile) {
+  // Autocomplete
+  const [suggestions, setSuggestions] = useState<RecentSearch[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [recentAll, setRecentAll] = useState<RecentSearch[]>([]);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setRecentAll(loadRecent());
+  }, []);
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (
+        !inputRef.current?.contains(e.target as Node) &&
+        !suggestionsRef.current?.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function handleInputChange(value: string) {
+    setRiotId(value);
+    const q = value.toLowerCase().trim();
+    if (q.length === 0) {
+      setSuggestions(recentAll);
+      setShowSuggestions(recentAll.length > 0);
+    } else {
+      const filtered = recentAll.filter((s) =>
+        s.riotId.toLowerCase().includes(q)
+      );
+      setSuggestions(filtered);
+      setShowSuggestions(filtered.length > 0);
+    }
+  }
+
+  function handleFocus() {
+    const recent = loadRecent();
+    setRecentAll(recent);
+    if (riotId.trim().length === 0) {
+      setSuggestions(recent);
+      setShowSuggestions(recent.length > 0);
+    }
+  }
+
+  function applySuggestion(s: RecentSearch) {
+    setRiotId(s.riotId);
+    setRegion(s.region);
+    setShowSuggestions(false);
+    inputRef.current?.focus();
+  }
+
+  async function fetchMatches(profileData: SummonerProfile, reg: string) {
     setLoadingMatches(true);
     try {
       const res = await fetch(
         `/api/matches?puuid=${encodeURIComponent(
           profileData.account.puuid
-        )}&region=${region}&start=0&count=20`
+        )}&region=${reg}&start=0&count=20`
       );
       const data = await res.json();
-      if (res.ok) {
-        setMatches(data as MatchHistory);
-      }
+      if (res.ok) setMatches(data as MatchHistory);
     } catch {
       console.error("Erro ao buscar histórico");
     } finally {
@@ -45,8 +123,10 @@ export function SummonerSearch() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setShowSuggestions(false);
     setError(null);
     setProfile(null);
+    setMatches(null);
     setLoading(true);
     try {
       const res = await fetch(
@@ -58,8 +138,9 @@ export function SummonerSearch() {
       } else {
         const profileData = data as SummonerProfile;
         setProfile(profileData);
-        // Busca histórico de partidas automaticamente
-        fetchMatches(profileData);
+        saveSearch(riotId, region);
+        setRecentAll(loadRecent());
+        fetchMatches(profileData, region);
       }
     } catch {
       setError("Falha de rede. Tente novamente.");
@@ -70,15 +151,39 @@ export function SummonerSearch() {
 
   return (
     <div>
-      <form onSubmit={handleSubmit} className="search-form">
-        <input
-          type="text"
-          placeholder="Nome#TAG"
-          value={riotId}
-          onChange={(e) => setRiotId(e.target.value)}
-          required
-          aria-label="Riot ID"
-        />
+      <form onSubmit={handleSubmit} className="search-form" style={{ position: "relative" }}>
+        <div style={{ position: "relative", flex: "1 1 220px" }}>
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Nome#TAG"
+            value={riotId}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onFocus={handleFocus}
+            required
+            aria-label="Riot ID"
+            autoComplete="off"
+            style={{ width: "100%" }}
+          />
+          {showSuggestions && suggestions.length > 0 && (
+            <div ref={suggestionsRef} className="suggestions-dropdown">
+              <p className="suggestions-label">Buscas recentes</p>
+              {suggestions.map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  className="suggestion-item"
+                  onMouseDown={() => applySuggestion(s)}
+                >
+                  <span className="suggestion-name">{s.riotId}</span>
+                  <span className="suggestion-region">
+                    {s.region.toUpperCase()}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
@@ -164,7 +269,7 @@ export function SummonerSearch() {
                     href={`/match/${matchId}?region=${region}&puuid=${profile.account.puuid}`}
                     className="match-item"
                   >
-                    <span className="match-id">{matchId.split("-")[1] ?? matchId}</span>
+                    <span className="match-id">{matchId}</span>
                     <span className="arrow">→</span>
                   </Link>
                 ))}
