@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="container hero">
@@ -8,6 +10,15 @@ export default function Home() {
         builds em uma experiência única. Foco inicial no servidor brasileiro
         (BR1).
       </p>
+
+      <div className="cta-row">
+        <Link href="/summoner" className="btn btn-primary">
+          Buscar invocador
+        </Link>
+        <Link href="/terms" className="btn">
+          Saiba mais
+        </Link>
+      </div>
 
       <div className="features">
         <div className="feature">
@@ -53,6 +64,30 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      <section className="roadmap">
+        <h2>Status &amp; roadmap</h2>
+        <ul>
+          <li>
+            <span className="status-badge status-live">Disponível</span>
+            <strong>Busca de invocador</strong> — perfil, nível e elo nas filas
+            ranqueadas.
+          </li>
+          <li>
+            <span className="status-badge status-soon">Em breve</span>
+            <strong>Histórico de partidas</strong> com gráficos de desempenho.
+          </li>
+          <li>
+            <span className="status-badge status-soon">Em breve</span>
+            <strong>Tier lists</strong> por elo e patch, atualizadas
+            automaticamente.
+          </li>
+          <li>
+            <span className="status-badge status-soon">Em breve</span>
+            <strong>Análise pós-partida</strong> com sugestões personalizadas.
+          </li>
+        </ul>
+      </section>
 
       <p className="disclaimer">
         Max LoL isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the

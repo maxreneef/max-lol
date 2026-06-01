@@ -3,9 +3,28 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Max LoL — Estatísticas de League of Legends",
+  metadataBase: new URL("https://max-lol.vercel.app"),
+  title: {
+    default: "Max LoL — Estatísticas de League of Legends",
+    template: "%s",
+  },
   description:
     "Plataforma de estatísticas de League of Legends: perfis de invocador, histórico de partidas, tier lists e análise de builds. Foco inicial no servidor BR.",
+  openGraph: {
+    title: "Max LoL — Estatísticas de League of Legends",
+    description:
+      "Perfis de invocador, histórico de partidas, tier lists e análise de builds. Foco inicial no servidor BR.",
+    url: "https://max-lol.vercel.app",
+    siteName: "Max LoL",
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Max LoL — Estatísticas de League of Legends",
+    description:
+      "Perfis de invocador, histórico de partidas, tier lists e análise de builds.",
+  },
 };
 
 export default function RootLayout({
@@ -23,8 +42,10 @@ export default function RootLayout({
             </Link>
             <nav>
               <Link href="/">Início</Link>
+              <Link href="/summoner">Buscar</Link>
               <Link href="/privacy">Privacidade</Link>
               <Link href="/terms">Termos</Link>
+              <Link href="/contact">Contato</Link>
             </nav>
           </div>
         </header>
