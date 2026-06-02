@@ -1679,3 +1679,232 @@ a.lobby-name:hover {
   color: #ff6b6b;
   font-weight: 500;
 }
+
+/* =====================
+   RESPONSIVIDADE MOBILE
+   ===================== */
+@media (max-width: 768px) {
+  /* Header — esconde links no mobile, mostra só brand */
+  .site-header nav {
+    display: none;
+  }
+
+  .site-header .inner {
+    padding: 0.75rem 1rem;
+  }
+
+  /* Container padding menor */
+  .container {
+    padding: 1.5rem 1rem;
+  }
+
+  /* Hero */
+  .hero h1 {
+    font-size: 1.6rem;
+  }
+
+  .features {
+    grid-template-columns: 1fr;
+  }
+
+  /* Busca de invocador */
+  .search-form {
+    flex-direction: column;
+  }
+
+  .search-form input,
+  .search-form select {
+    width: 100%;
+    flex: none;
+  }
+
+  /* Profile */
+  .ranked-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Match cards */
+  .match-card {
+    grid-template-columns: 4px 40px 1fr auto;
+    grid-template-rows: auto auto;
+  }
+
+  .match-card-stats {
+    display: none;
+  }
+
+  /* Match detail — times empilhados */
+  .teams-container {
+    grid-template-columns: 1fr;
+  }
+
+  .match-header {
+    grid-template-columns: 1fr auto 1fr;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  .participant {
+    grid-template-columns: 40px 1fr auto;
+  }
+
+  /* Charts */
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Champ stats */
+  .champ-stat-row {
+    grid-template-columns: 36px 1fr 40px 60px 70px;
+    grid-template-rows: auto auto;
+  }
+
+  .champ-stat-dmg {
+    display: none;
+  }
+
+  .champ-stat-bar-bg {
+    grid-column: 1 / -1;
+  }
+
+  /* Tier list */
+  .tl-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .tl-sort {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .tl-search {
+    width: 100%;
+  }
+
+  .tl-group {
+    flex-direction: column;
+  }
+
+  .tl-tier-label {
+    align-self: flex-start;
+  }
+
+  /* Leaderboard */
+  .lb-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* Compare */
+  .cmp-inputs,
+  .cmp-profiles {
+    grid-template-columns: 1fr;
+  }
+
+  .cmp-row {
+    grid-template-columns: 100px 1fr 100px;
+  }
+
+  .cmp-val {
+    font-size: 0.75rem;
+  }
+
+  /* Lobby */
+  .lobby-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Live game */
+  .live-name {
+    max-width: 80px;
+  }
+
+  /* Champion page */
+  .champ-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .champ-tier-badge {
+    margin-left: 0;
+  }
+
+  .champ-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .builds-grid,
+  .runes-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Footer */
+  .site-footer .inner {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .site-footer nav {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+}
+
+/* Menu mobile hamburguer */
+@media (max-width: 768px) {
+  .site-header .inner {
+    position: relative;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  .mobile-menu-btn span {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 2px;
+    transition: all 0.2s;
+  }
+
+  .mobile-nav {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 20;
+  }
+
+  .mobile-nav a {
+    color: var(--text);
+    font-size: 1rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .mobile-nav a:last-child {
+    border-bottom: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .mobile-menu-btn,
+  .mobile-nav {
+    display: none !important;
+  }
+}

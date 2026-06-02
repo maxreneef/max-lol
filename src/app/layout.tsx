@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MobileNav } from "./MobileNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -51,6 +52,7 @@ export default function RootLayout({
               <Link href="/terms">Termos</Link>
               <Link href="/contact">Contato</Link>
             </nav>
+            <MobileNav />
           </div>
         </header>
         {children}
