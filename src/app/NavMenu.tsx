@@ -24,6 +24,7 @@ const NAV: NavGroup[] = [
       { href: "/champions", label: "Todos os campeões", desc: "Grid com filtros por role" },
       { href: "/tierlist",  label: "Tier List",         desc: "Ranking por win rate" },
       { href: "/rotation",  label: "Rotação gratuita",  desc: "Campeões grátis esta semana" },
+      { href: "/spells",    label: "Buscar habilidade", desc: "Encontre campeões por spell" },
     ],
   },
   {
