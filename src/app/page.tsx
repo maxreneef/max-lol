@@ -1,101 +1,80 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Max LoL — Estatísticas de League of Legends",
+};
 
 export default function Home() {
   return (
-    <main className="container hero">
-      <h1>Max LoL — suas estatísticas de League of Legends</h1>
-      <p className="tagline">
-        Uma plataforma completa de estatísticas de League of Legends, reunindo
-        perfis de invocador, histórico de partidas, tier lists e análise de
-        builds em uma experiência única. Foco inicial no servidor brasileiro
-        (BR1).
-      </p>
-
-      <div className="cta-row">
-        <Link href="/summoner" className="btn btn-primary">
-          Buscar invocador
-        </Link>
-        <Link href="/terms" className="btn">
-          Saiba mais
-        </Link>
-      </div>
-
-      <div className="features">
-        <div className="feature">
-          <h3>Perfis de invocador</h3>
-          <p>
-            Histórico de elo, maestria de campeões, taxas de vitória e
-            estatísticas de KDA.
+    <main>
+      {/* Hero */}
+      <section className="home-hero">
+        <div className="home-hero-inner">
+          <h1 className="home-title">
+            Domine o <span className="gold">League of Legends</span> com dados reais
+          </h1>
+          <p className="home-sub">
+            Perfis de invocador, histórico de partidas, tier lists, análise de
+            lobby e muito mais — focado no servidor brasileiro.
           </p>
+          <div className="home-cta">
+            <Link href="/summoner" className="btn btn-primary btn-lg">
+              Buscar invocador →
+            </Link>
+            <Link href="/tierlist" className="btn btn-lg">
+              Ver Tier List
+            </Link>
+          </div>
         </div>
-        <div className="feature">
-          <h3>Histórico de partidas</h3>
-          <p>
-            Gráficos interativos de desempenho: timeline de ouro, distribuição
-            de dano e participação em objetivos.
-          </p>
-        </div>
-        <div className="feature">
-          <h3>Estatísticas de campeões</h3>
-          <p>
-            Builds, runas, ordem de habilidades e taxas de vitória agregadas de
-            partidas de alto elo.
-          </p>
-        </div>
-        <div className="feature">
-          <h3>Tier lists</h3>
-          <p>
-            Listas filtradas por faixa de elo e patch, atualizadas
-            automaticamente a cada atualização da Riot.
-          </p>
-        </div>
-        <div className="feature">
-          <h3>Visualizador ao vivo</h3>
-          <p>
-            Dados de seleção de campeões em tempo real e análise de lobby
-            pré-partida para múltiplos invocadores.
-          </p>
-        </div>
-        <div className="feature">
-          <h3>Análise pós-partida</h3>
-          <p>
-            Sugestões personalizadas de melhoria e acompanhamento de builds de
-            jogadores profissionais.
-          </p>
-        </div>
-      </div>
-
-      <section className="roadmap">
-        <h2>Status &amp; roadmap</h2>
-        <ul>
-          <li>
-            <span className="status-badge status-live">Disponível</span>
-            <strong>Busca de invocador</strong> — perfil, nível e elo nas filas
-            ranqueadas.
-          </li>
-          <li>
-            <span className="status-badge status-live">Disponível</span>
-            <strong>Histórico de partidas</strong> — últimas 20 partidas com
-            visualização de detalhes.
-          </li>
-          <li>
-            <span className="status-badge status-soon">Em breve</span>
-            <strong>Análise de performance</strong> com gráficos de KDA, ouro e
-            dano por partida.
-          </li>
-          <li>
-            <span className="status-badge status-soon">Em breve</span>
-            <strong>Tier lists</strong> por elo e patch, atualizadas
-            automaticamente.
-          </li>
-          <li>
-            <span className="status-badge status-soon">Em breve</span>
-            <strong>Análise pós-partida</strong> com sugestões personalizadas.
-          </li>
-        </ul>
       </section>
 
-      <p className="disclaimer">
+      {/* Features grid */}
+      <section className="home-features container">
+        <h2 className="home-section-title">Tudo que você precisa</h2>
+        <div className="home-features-grid">
+          {FEATURES.map((f) => (
+            <Link key={f.href} href={f.href} className="home-feature-card">
+              <span className="home-feature-icon">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Stats bar */}
+      <section className="home-stats">
+        <div className="container home-stats-inner">
+          {STATS.map((s) => (
+            <div key={s.label} className="home-stat">
+              <span className="home-stat-val">{s.val}</span>
+              <span className="home-stat-label">{s.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Roadmap */}
+      <section className="container">
+        <h2 className="home-section-title">Status &amp; roadmap</h2>
+        <div className="roadmap">
+          <ul>
+            {ROADMAP.map((r) => (
+              <li key={r.title}>
+                <span className={`status-badge ${r.live ? "status-live" : "status-soon"}`}>
+                  {r.live ? "Disponível" : "Em breve"}
+                </span>
+                <strong>{r.title}</strong>
+                {" — "}
+                {r.desc}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <p className="disclaimer container">
         Max LoL isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the
         views or opinions of Riot Games or anyone officially involved in
         producing or managing Riot Games properties. Riot Games, and all
@@ -105,3 +84,34 @@ export default function Home() {
     </main>
   );
 }
+
+const FEATURES = [
+  { href: "/summoner", icon: "🔍", title: "Busca de invocador", desc: "Perfil completo com elo, nível, ícone e filas ranqueadas." },
+  { href: "/summoner", icon: "📋", title: "Histórico de partidas", desc: "Últimas 20 partidas com campeão, KDA, dano e resultado." },
+  { href: "/summoner", icon: "📈", title: "Gráficos de performance", desc: "Evolução de KDA e dano ao longo das partidas recentes." },
+  { href: "/tierlist", icon: "🏆", title: "Tier List", desc: "Ranking de todos os campeões com win rate, pick e ban rate." },
+  { href: "/leaderboard", icon: "👑", title: "Leaderboard", desc: "Os melhores jogadores Challenger, Grandmaster e Master." },
+  { href: "/lobby", icon: "🎯", title: "Análise de Lobby", desc: "Analise até 10 invocadores antes da partida começar." },
+  { href: "/compare", icon: "⚔️", title: "Comparar Invocadores", desc: "Coloque dois jogadores lado a lado com barras comparativas." },
+  { href: "/summoner", icon: "🔴", title: "Partida Ao Vivo", desc: "Veja se um invocador está em partida agora com tempo real." },
+];
+
+const STATS = [
+  { val: "170+", label: "Campeões" },
+  { val: "6+", label: "Regiões" },
+  { val: "5", label: "Filas monitoradas" },
+  { val: "100%", label: "Gratuito" },
+];
+
+const ROADMAP = [
+  { title: "Busca de invocador", desc: "Perfil, nível, elo e filas ranqueadas.", live: true },
+  { title: "Histórico de partidas", desc: "Últimas 20 partidas com detalhes completos.", live: true },
+  { title: "Análise pós-partida", desc: "Insights de KDA, CS, dano, visão e ouro.", live: true },
+  { title: "Tier List", desc: "Ranking de campeões por tier e win rate.", live: true },
+  { title: "Leaderboard", desc: "Top Challenger, Grandmaster e Master.", live: true },
+  { title: "Análise de Lobby", desc: "Multi-busca de invocadores pré-partida.", live: true },
+  { title: "Comparação de invocadores", desc: "Dois jogadores lado a lado.", live: true },
+  { title: "Partida ao vivo", desc: "Dados em tempo real da partida atual.", live: true },
+  { title: "Estatísticas detalhadas de campeões", desc: "Builds, runas e matchups reais com dados agregados.", live: false },
+  { title: "Análise de builds", desc: "Items mais eficientes por patch e elo.", live: false },
+];
