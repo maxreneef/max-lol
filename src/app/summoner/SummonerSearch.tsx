@@ -10,6 +10,7 @@ import {
 } from "@/lib/types";
 import { PerformanceChart } from "./PerformanceChart";
 import { LiveGame } from "./LiveGame";
+import { ChampStats } from "./ChampStats";
 
 const STORAGE_KEY = "maxlol:recent_searches";
 const MAX_RECENT = 10;
@@ -279,6 +280,10 @@ export function SummonerSearch() {
 
           {summaries && summaries.length >= 3 && (
             <PerformanceChart summaries={summaries} />
+          )}
+
+          {summaries && summaries.length > 0 && (
+            <ChampStats summaries={summaries} />
           )}
 
           <div style={{ marginTop: "2rem" }}>

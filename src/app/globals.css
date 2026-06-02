@@ -487,6 +487,77 @@ a:hover {
   color: var(--muted);
 }
 
+/* Champ stats section */
+.champ-stats-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.champ-stats-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.champ-stat-row {
+  display: grid;
+  grid-template-columns: 36px 120px 36px 70px 80px 70px 1fr;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.champ-stat-row:hover {
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+.champ-stat-icon {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.champ-stat-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.champ-stat-games,
+.champ-stat-kda,
+.champ-stat-dmg {
+  color: var(--muted);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.champ-stat-wr {
+  font-weight: 700;
+  font-size: 0.88rem;
+  text-align: center;
+}
+
+.champ-stat-bar-bg {
+  height: 5px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.champ-stat-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
 /* Compare page */
 .cmp-inputs {
   display: grid;
