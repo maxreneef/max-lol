@@ -2427,6 +2427,124 @@ a.lobby-name:hover {
   font-weight: 600;
 }
 
+.item-grid-eff {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+/* Gold efficiency */
+.item-efficiency {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+.item-eff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.item-eff-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.item-eff-pct {
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.item-eff-bar-bg {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: visible;
+  position: relative;
+  margin-bottom: 0.4rem;
+}
+
+.item-eff-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  max-width: 100%;
+  transition: width 0.6s ease;
+}
+
+.item-eff-baseline {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: var(--muted);
+  border-radius: 2px;
+  transform: translateX(-1px);
+}
+
+.item-eff-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.item-stat-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.item-stat-gold {
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.recipe-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.recipe-item:hover { opacity: 0.75; }
+
+.recipe-icon {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.recipe-cost {
+  font-size: 0.68rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.lb-name-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  color: var(--text);
+  font-size: inherit;
+  font-weight: 500;
+  transition: color 0.15s;
+}
+
+.lb-name-btn:hover { color: var(--accent-2); }
+.lb-name-btn:disabled { opacity: 0.6; cursor: wait; }
+
 .item-detail-panel {
   background: var(--panel);
   border: 1px solid var(--border);
