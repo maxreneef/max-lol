@@ -150,7 +150,7 @@ export function LeaderboardClient() {
                     </td>
                     <td>
                       <Link
-                        href={`/summoner?search=${encodeURIComponent(e.summonerName)}&region=${region}`}
+                        href={`/summoner?riotId=${encodeURIComponent(e.summonerName)}&region=${region}`}
                         className="lb-search-btn"
                       >
                         Ver perfil →

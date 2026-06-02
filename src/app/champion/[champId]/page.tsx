@@ -34,6 +34,7 @@ export default async function ChampionPage({
     S: "#c89b3c", A: "#51cf66", B: "#0ac8b9", C: "#adb5bd", D: "#ff6b6b",
   };
 
+  const allChampions = await fetchChampions();
   const mockBuilds = [
     { name: "Ofensivo", items: ["Trinity Force", "Sterak's Gage", "Death's Dance", "Guardian Angel", "Plated Steelcaps", "Black Cleaver"], wr: 57.2, games: 1840 },
     { name: "Tank", items: ["Sunfire Aegis", "Heartsteel", "Warmog's Armor", "Force of Nature", "Plated Steelcaps", "Thornmail"], wr: 53.1, games: 920 },
@@ -156,9 +157,59 @@ export default async function ChampionPage({
         ))}
       </div>
 
+      {/* Matchups */}
+      <h2 className="section-title">Matchups — Melhores vs Piores</h2>
+      <div className="matchups-grid">
+        <div className="matchup-col">
+          <h3 className="matchup-col-title good">Favoráveis</h3>
+          {generateMatchups(champ.id, allChampions, "good").map((m) => (
+            <Link key={m.id} href={`/champion/${m.id}`} className="matchup-row">
+              <img src={`${DD_BASE}/img/champion/${m.id}.png`} alt={m.name} width={32} height={32} className="matchup-icon" />
+              <span className="matchup-name">{m.name}</span>
+              <span className="matchup-wr good">{m.wr}% WR</span>
+            </Link>
+          ))}
+        </div>
+        <div className="matchup-col">
+          <h3 className="matchup-col-title bad">Difíceis</h3>
+          {generateMatchups(champ.id, allChampions, "bad").map((m) => (
+            <Link key={m.id} href={`/champion/${m.id}`} className="matchup-row">
+              <img src={`${DD_BASE}/img/champion/${m.id}.png`} alt={m.name} width={32} height={32} className="matchup-icon" />
+              <span className="matchup-name">{m.name}</span>
+              <span className="matchup-wr bad">{m.wr}% WR</span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       <p className="disclaimer" style={{ marginTop: "2.5rem" }}>
-        Builds e runas são representativas. Dados reais serão calculados a partir de partidas coletadas com a Production API Key.
+        Builds, runas e matchups são representativos. Dados reais serão calculados a partir de partidas coletadas com a Production API Key.
       </p>
     </main>
   );
+}
+
+function generateMatchups(
+  champId: string,
+  all: import("@/lib/ddragon").DDChampion[],
+  type: "good" | "bad"
+) {
+  // Gera matchups determinísticos a partir dos IDs dos dois campeões
+  let h = 0;
+  for (const c of champId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+
+  const pool = all
+    .filter((c) => c.id !== champId)
+    .map((c) => {
+      let seed = h;
+      for (const ch of c.id) seed = (seed * 31 + ch.charCodeAt(0)) >>> 0;
+      const wr = type === "good"
+        ? 55 + (seed % 1200) / 100
+        : 36 + (seed % 1200) / 100;
+      return { id: c.id, name: c.name, wr: +wr.toFixed(1), seed };
+    })
+    .sort((a, b) => type === "good" ? b.wr - a.wr : a.wr - b.wr)
+    .slice(0, 5);
+
+  return pool;
 }
