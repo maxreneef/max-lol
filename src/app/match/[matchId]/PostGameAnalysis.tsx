@@ -20,7 +20,8 @@ function analyze(match: MatchDTO, puuid: string): Insight[] {
   const insights: Insight[] = [];
   const kda = (p.kills + p.assists) / Math.max(p.deaths, 1);
   const durationMin = match.info.gameDuration / 60;
-  const csPerMin = ((p.totalMinionsKilled ?? 0) + (p.neutralMinionsKilled ?? 0)) / durationMin;
+  const totalCS = (p.totalMinionsKilled ?? 0) + (p.neutralMinionsKilled ?? 0);
+  const csPerMin = totalCS / durationMin;
   const allies = match.info.participants.filter(
     (x) => Number(x.teamId) === Number(p.teamId)
   );
@@ -39,11 +40,11 @@ function analyze(match: MatchDTO, puuid: string): Insight[] {
 
   // CS
   if (csPerMin >= 8) {
-    insights.push({ type: "good", title: "CS excelente", detail: `${csPerMin.toFixed(1)} CS/min — farm de alto nível.` });
+    insights.push({ type: "good", title: "CS excelente 🌾", detail: `${totalCS} CS (${csPerMin.toFixed(1)}/min) — farm de alto nível.` });
   } else if (csPerMin < 5 && durationMin > 15) {
-    insights.push({ type: "warn", title: "CS abaixo do ideal", detail: `${csPerMin.toFixed(1)} CS/min. Tente completar ondas durante tempos mortos no mapa.` });
+    insights.push({ type: "warn", title: "CS abaixo do ideal", detail: `${totalCS} CS (${csPerMin.toFixed(1)}/min). Tente completar ondas durante tempos mortos no mapa.` });
   } else if (csPerMin >= 6) {
-    insights.push({ type: "tip", title: "CS razoável", detail: `${csPerMin.toFixed(1)} CS/min. Com 7+ CS/min você estará no nível de Diamond+.` });
+    insights.push({ type: "tip", title: "CS razoável", detail: `${totalCS} CS (${csPerMin.toFixed(1)}/min). Com 7+ CS/min você estará no nível de Diamond+.` });
   }
 
   // Dano

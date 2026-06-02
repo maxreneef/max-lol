@@ -348,6 +348,47 @@ a:hover {
   cursor: not-allowed;
 }
 
+/* Skeleton loading */
+.skeleton-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.skeleton-circle {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--border);
+  animation: shimmer 1.4s infinite;
+  background: linear-gradient(90deg, var(--panel) 25%, var(--border) 50%, var(--panel) 75%);
+  background-size: 200% 100%;
+  flex-shrink: 0;
+}
+
+.skeleton-line {
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--panel) 25%, var(--border) 50%, var(--panel) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.skeleton-block {
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--panel) 25%, var(--border) 50%, var(--panel) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+.w-200 { width: 200px; }
+.w-160 { width: 160px; }
+.w-120 { width: 120px; }
+.w-100 { width: 100px; }
+.h-80  { height: 80px; }
+.h-64  { height: 64px; }
+
 /* Patch notes */
 .patch-featured {
   display: block;

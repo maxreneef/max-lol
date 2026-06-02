@@ -14,6 +14,7 @@ import { LiveGame } from "./LiveGame";
 import { ChampStats } from "./ChampStats";
 import { MasterySection } from "./MasterySection";
 import { RecentForm } from "./RecentForm";
+import { ProfileSkeleton } from "./ProfileSkeleton";
 
 /* ── localStorage helpers ── */
 const SEARCH_KEY = "maxlol:recent_searches";
@@ -280,7 +281,9 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
 
       {error && <p className="search-error" style={{ marginTop: "1rem" }}>{error}</p>}
 
-      {profile && (
+      {loading && <ProfileSkeleton />}
+
+      {!loading && profile && (
         <div className="profile-card">
           <LiveGame puuid={profile.account.puuid} region={region} />
 
