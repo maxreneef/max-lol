@@ -9,6 +9,8 @@ const NAV_LINKS = [
   { href: "/leaderboard", label: "Ranking" },
   { href: "/lobby", label: "Lobby" },
   { href: "/compare", label: "Comparar" },
+  { href: "/rotation", label: "Rotação" },
+  { href: "/items", label: "Itens" },
   { href: "/privacy", label: "Privacidade" },
   { href: "/terms", label: "Termos" },
   { href: "/contact", label: "Contato" },

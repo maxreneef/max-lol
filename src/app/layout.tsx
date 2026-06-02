@@ -48,6 +48,8 @@ export default function RootLayout({
               <Link href="/leaderboard">Ranking</Link>
               <Link href="/lobby">Lobby</Link>
               <Link href="/compare">Comparar</Link>
+              <Link href="/rotation">Rotação</Link>
+              <Link href="/items">Itens</Link>
               <Link href="/privacy">Privacidade</Link>
               <Link href="/terms">Termos</Link>
               <Link href="/contact">Contato</Link>

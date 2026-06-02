@@ -3,6 +3,8 @@ import { cached } from "./cache";
 import { mockProfile } from "./mock";
 import {
   PLATFORMS,
+  type ChampionMastery,
+  type FreeRotation,
   type LeagueEntryDTO,
   type LeagueList,
   type LiveGame,
@@ -114,6 +116,30 @@ export async function getProfile(
 
 export function hasApiKey(): boolean {
   return Boolean(API_KEY);
+}
+
+export async function getChampionMastery(
+  puuid: string,
+  platform: Platform,
+  count: number = 10
+): Promise<ChampionMastery[]> {
+  if (!API_KEY) return [];
+  const key = `mastery:${platform}:${puuid}:${count}`;
+  return cached(key, 300_000, () =>
+    riotFetch<ChampionMastery[]>(
+      `${platformHost(platform)}/lol/champion-mastery/v4/champion-masteries/by-puuid/${puuid}/top?count=${count}`
+    )
+  );
+}
+
+export async function getFreeRotation(platform: Platform): Promise<FreeRotation | null> {
+  if (!API_KEY) return null;
+  const key = `freerotation:${platform}`;
+  return cached(key, 3_600_000, () =>
+    riotFetch<FreeRotation>(
+      `${platformHost(platform)}/lol/platform/v3/champion-rotations`
+    )
+  );
 }
 
 export async function getLiveGame(

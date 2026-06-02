@@ -177,6 +177,23 @@ export interface LiveGame {
   bannedChampions: Array<{ championId: number; teamId: number; pickTurn: number }>;
 }
 
+export interface ChampionMastery {
+  championId: number;
+  championLevel: number;
+  championPoints: number;
+  lastPlayTime: number;
+  championPointsSinceLastLevel: number;
+  championPointsUntilNextLevel: number;
+  chestGranted: boolean;
+  tokensEarned: number;
+}
+
+export interface FreeRotation {
+  freeChampionIds: number[];
+  freeChampionIdsForNewPlayers: number[];
+  maxNewPlayerLevel: number;
+}
+
 export interface LeagueEntry {
   summonerId: string;
   summonerName: string;

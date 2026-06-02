@@ -11,6 +11,7 @@ import {
 import { PerformanceChart } from "./PerformanceChart";
 import { LiveGame } from "./LiveGame";
 import { ChampStats } from "./ChampStats";
+import { MasterySection } from "./MasterySection";
 
 /* ── localStorage helpers ── */
 const SEARCH_KEY = "maxlol:recent_searches";
@@ -339,6 +340,8 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
               ))}
             </div>
           )}
+
+          <MasterySection puuid={profile.account.puuid} region={region} />
 
           {summaries && summaries.length >= 3 && (
             <PerformanceChart summaries={summaries} />
