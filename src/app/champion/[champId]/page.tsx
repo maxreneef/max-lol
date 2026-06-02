@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { fetchChampions, mockTierStats, primaryRole, DD_BASE } from "@/lib/ddragon";
+import { fetchChampions, fetchChampionDetail, mockTierStats, primaryRole, DD_BASE } from "@/lib/ddragon";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -34,7 +34,10 @@ export default async function ChampionPage({
     S: "#c89b3c", A: "#51cf66", B: "#0ac8b9", C: "#adb5bd", D: "#ff6b6b",
   };
 
-  const allChampions = await fetchChampions();
+  const [allChampions, detail] = await Promise.all([
+    fetchChampions(),
+    fetchChampionDetail(champ.id),
+  ]);
   const mockBuilds = [
     { name: "Ofensivo", items: ["Trinity Force", "Sterak's Gage", "Death's Dance", "Guardian Angel", "Plated Steelcaps", "Black Cleaver"], wr: 57.2, games: 1840 },
     { name: "Tank", items: ["Sunfire Aegis", "Heartsteel", "Warmog's Armor", "Force of Nature", "Plated Steelcaps", "Thornmail"], wr: 53.1, games: 920 },
@@ -156,6 +159,58 @@ export default async function ChampionPage({
           </div>
         ))}
       </div>
+
+      {/* Lore */}
+      {detail?.lore && (
+        <>
+          <h2 className="section-title">Lore</h2>
+          <p style={{ color: "var(--muted)", lineHeight: 1.8, maxWidth: 720, marginBottom: "1rem" }}>
+            {detail.lore}
+          </p>
+        </>
+      )}
+
+      {/* Habilidades */}
+      {detail?.spells && (
+        <>
+          <h2 className="section-title">Habilidades</h2>
+          <div className="spells-grid">
+            {/* Passiva */}
+            <div className="spell-card">
+              <img
+                src={`${DD_BASE}/img/passive/${detail.passive.image.full}`}
+                alt={detail.passive.name}
+                width={48} height={48}
+                className="spell-icon"
+              />
+              <div>
+                <p className="spell-key">Passiva</p>
+                <p className="spell-name">{detail.passive.name}</p>
+                <p className="spell-desc"
+                  dangerouslySetInnerHTML={{ __html: detail.passive.description.replace(/<[^>]+>/g, " ").slice(0, 120) + "…" }}
+                />
+              </div>
+            </div>
+            {detail.spells.slice(0, 4).map((sp, i) => (
+              <div key={sp.id} className="spell-card">
+                <img
+                  src={`${DD_BASE}/img/spell/${sp.image.full}`}
+                  alt={sp.name}
+                  width={48} height={48}
+                  className="spell-icon"
+                />
+                <div>
+                  <p className="spell-key">{["Q","W","E","R"][i]}</p>
+                  <p className="spell-name">{sp.name}</p>
+                  <p className="spell-desc">
+                    {sp.description.replace(/<[^>]+>/g, " ").slice(0, 120)}…
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Matchups */}
       <h2 className="section-title">Matchups — Melhores vs Piores</h2>

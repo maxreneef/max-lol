@@ -10,6 +10,19 @@ export function profileIcon(id: number) {
   return `${DD_BASE}/img/profileicon/${id}.png`;
 }
 
+export interface DDSpell {
+  id: string;
+  name: string;
+  description: string;
+  image: { full: string };
+}
+
+export interface DDChampionFull extends DDChampion {
+  spells: DDSpell[];
+  passive: { name: string; description: string; image: { full: string } };
+  lore: string;
+}
+
 export interface DDChampion {
   id: string;        // "Aatrox"
   key: string;       // "266"
@@ -30,6 +43,19 @@ export interface DDChampion {
     difficulty: number;
   };
   partype: string;
+}
+
+export async function fetchChampionDetail(id: string): Promise<DDChampionFull | null> {
+  try {
+    const res = await fetch(
+      `${DD_BASE}/data/pt_BR/champion/${id}.json`,
+      { next: { revalidate: 3600 } }
+    );
+    const json = await res.json();
+    return json.data[id] as DDChampionFull;
+  } catch {
+    return null;
+  }
 }
 
 export interface DDChampionList {
