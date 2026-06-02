@@ -8,6 +8,7 @@ import {
   type MatchSummary,
   type SummonerProfile,
 } from "@/lib/types";
+import { PerformanceChart } from "./PerformanceChart";
 
 const STORAGE_KEY = "maxlol:recent_searches";
 const MAX_RECENT = 10;
@@ -270,6 +271,10 @@ export function SummonerSearch() {
                 </div>
               ))}
             </div>
+          )}
+
+          {summaries && summaries.length >= 3 && (
+            <PerformanceChart summaries={summaries} />
           )}
 
           <div style={{ marginTop: "2rem" }}>

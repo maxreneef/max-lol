@@ -487,6 +487,452 @@ a:hover {
   color: var(--muted);
 }
 
+/* Performance chart */
+.perf-chart-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.perf-summary {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.perf-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.perf-val {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.perf-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.chart-wrap {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem;
+  overflow: hidden;
+}
+
+.chart-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.chart-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Tier List */
+.tl-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  align-items: center;
+}
+
+.tl-search {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.55rem 0.9rem;
+  font-size: 0.9rem;
+  width: 200px;
+}
+
+.tl-search:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+.tl-pills {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tl-pill {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tl-pill:hover {
+  border-color: var(--accent-2);
+  color: var(--text);
+}
+
+.tl-pill.active {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  color: #0a0e14;
+  font-weight: 600;
+}
+
+.tl-sort {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.88rem;
+  margin-left: auto;
+}
+
+.tl-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tl-group {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+}
+
+.tl-tier-label {
+  font-size: 2rem;
+  font-weight: 800;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.tl-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tl-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  width: 68px;
+  text-decoration: none;
+  color: inherit;
+  padding: 0.3rem;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.tl-card:hover {
+  background: rgba(255,255,255,0.06);
+  text-decoration: none;
+}
+
+.tl-card-icon {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.tl-card-name {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.tl-card-wr {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-2);
+}
+
+/* Tier list table */
+.tl-table-wrap {
+  overflow-x: auto;
+}
+
+.tl-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tl-table th {
+  text-align: left;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tl-table td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.tl-table tr:last-child td {
+  border-bottom: none;
+}
+
+.tl-table tr:hover td {
+  background: rgba(255,255,255,0.03);
+}
+
+.tl-champ-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.tl-champ-link:hover {
+  text-decoration: none;
+  color: var(--accent-2);
+}
+
+.tl-champ-sm {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.tl-tier-badge {
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+}
+
+.stat-good { color: #51cf66; font-weight: 600; }
+.stat-bad  { color: #ff6b6b; font-weight: 600; }
+
+/* Champion page */
+.champ-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+}
+
+.champ-big-icon {
+  border-radius: 12px;
+  border: 2px solid var(--accent);
+}
+
+.champ-tag {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.champ-tier-badge {
+  margin-left: auto;
+  font-size: 3rem;
+  font-weight: 800;
+  border: 2px solid;
+  border-radius: 12px;
+  width: 72px;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.champ-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+
+.stat-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.35rem;
+}
+
+.stat-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.section-title {
+  font-size: 1.15rem;
+  color: var(--accent);
+  margin: 2rem 0 1rem;
+}
+
+.base-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 500px;
+}
+
+.base-stat-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 40px;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.base-stat-label {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.base-stat-bar-bg {
+  background: var(--border);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.base-stat-bar-fill {
+  background: var(--accent-2);
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.base-stat-val {
+  color: var(--text);
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.builds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.build-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.build-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.build-name {
+  font-weight: 600;
+}
+
+.build-wr {
+  color: #51cf66;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.build-games {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.build-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.build-item-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.runes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.rune-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.rune-name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.rune-desc {
+  color: var(--muted);
+  font-size: 0.82rem;
+  margin-bottom: 0.5rem;
+}
+
+.rune-wr {
+  color: #51cf66;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
 /* Match list rich cards */
 .match-list-rich {
   display: flex;
