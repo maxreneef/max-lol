@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { NavMenu } from "./NavMenu";
 import { MobileNav } from "./MobileNav";
 import "./globals.css";
 
@@ -41,20 +42,7 @@ export default function RootLayout({
             <Link href="/" className="brand">
               Max<span> LoL</span>
             </Link>
-            <nav>
-              <Link href="/">Início</Link>
-              <Link href="/summoner">Buscar</Link>
-              <Link href="/tierlist">Tier List</Link>
-              <Link href="/leaderboard">Ranking</Link>
-              <Link href="/lobby">Lobby</Link>
-              <Link href="/compare">Comparar</Link>
-              <Link href="/rotation">Rotação</Link>
-              <Link href="/items">Itens</Link>
-              <Link href="/runes">Runas</Link>
-              <Link href="/privacy">Privacidade</Link>
-              <Link href="/terms">Termos</Link>
-              <Link href="/contact">Contato</Link>
-            </nav>
+            <NavMenu />
             <MobileNav />
           </div>
         </header>
@@ -63,8 +51,9 @@ export default function RootLayout({
           <div className="inner">
             <span>© {new Date().getFullYear()} Max LoL</span>
             <nav>
-              <Link href="/privacy">Política de Privacidade</Link>
-              <Link href="/terms">Termos de Uso</Link>
+              <Link href="/privacy">Privacidade</Link>
+              <Link href="/terms">Termos</Link>
+              <Link href="/about">Sobre</Link>
               <a href="mailto:maxreneef@gmail.com">Contato</a>
             </nav>
           </div>

@@ -8,6 +8,7 @@ import {
   type MatchSummary,
   type SummonerProfile,
 } from "@/lib/types";
+import { calcGrade, GRADE_COLORS } from "@/lib/grade";
 import { PerformanceChart } from "./PerformanceChart";
 import { LiveGame } from "./LiveGame";
 import { ChampStats } from "./ChampStats";
@@ -415,7 +416,11 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
                       <p>{(s.goldEarned / 1000).toFixed(1)}k ouro</p>
                       <p>{formatDuration(s.gameDuration)}</p>
                     </div>
+                    <div className="match-grade" style={{ color: GRADE_COLORS[calcGrade(s, summaries ?? [])] }}>
+                      {calcGrade(s, summaries ?? [])}
+                    </div>
                     <div className={`match-outcome ${s.win ? "win" : "loss"}`}>{s.win ? "V" : "D"}</div>
+
                   </Link>
                 ))}
               </div>
