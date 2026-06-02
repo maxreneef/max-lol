@@ -89,8 +89,8 @@ export function MatchDetail() {
       </div>
 
       <div className="teams-container">
-        <TeamSection participants={blueParticipants} region={region} puuid={puuid} />
-        <TeamSection participants={redParticipants} region={region} puuid={puuid} />
+        <TeamSection participants={blueParticipants} puuid={puuid} />
+        <TeamSection participants={redParticipants} puuid={puuid} />
       </div>
 
       <div style={{ marginTop: "2rem" }}>
@@ -102,54 +102,69 @@ export function MatchDetail() {
   );
 }
 
+const DD = "https://ddragon.leagueoflegends.com/cdn/15.11.1";
+
+function ItemSlot({ itemId }: { itemId: number }) {
+  if (!itemId) return <div className="item-slot empty" />;
+  return (
+    <img
+      src={`${DD}/img/item/${itemId}.png`}
+      alt={`Item ${itemId}`}
+      width={24}
+      height={24}
+      className="item-slot"
+      onError={(e) => {
+        (e.target as HTMLImageElement).style.display = "none";
+      }}
+    />
+  );
+}
+
 function TeamSection({
   participants,
-  region,
   puuid,
 }: {
   participants: any[];
-  region: string;
   puuid: string;
 }) {
   return (
     <div className="team-section">
-      {participants.map((p) => (
-        <div
-          key={p.puuid}
-          className={`participant ${p.puuid === puuid ? "highlight" : ""}`}
-        >
-          <img
-            src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${p.championName}.png`}
-            alt={p.championName}
-            width={48}
-            height={48}
-            className="champion-icon"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-          <div className="participant-info">
-            <p className="name">
-              {p.riotIdGameName || p.summonerName}
-              {p.riotIdTagline && (
-                <span className="tag">#{p.riotIdTagline}</span>
-              )}
-            </p>
-            <p className="champion">{p.championName}</p>
-            <p className="kda">
-              <strong>{p.kills}</strong> / {p.deaths} /{" "}
-              <strong>{p.assists}</strong>
-            </p>
+      {participants.map((p) => {
+        const items = [p.item0, p.item1, p.item2, p.item3, p.item4, p.item5, p.item6];
+        return (
+          <div
+            key={p.puuid}
+            className={`participant ${p.puuid === puuid ? "highlight" : ""}`}
+          >
+            <img
+              src={`${DD}/img/champion/${p.championName}.png`}
+              alt={p.championName}
+              width={48}
+              height={48}
+              className="champion-icon"
+              onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+            />
+            <div className="participant-info">
+              <p className="name">
+                {p.riotIdGameName || p.summonerName}
+                {p.riotIdTagline && <span className="tag">#{p.riotIdTagline}</span>}
+              </p>
+              <p className="champion">{p.championName}</p>
+              <p className="kda">
+                <strong>{p.kills}</strong> / {p.deaths} / <strong>{p.assists}</strong>
+              </p>
+              <div className="items-row">
+                {items.map((id, idx) => <ItemSlot key={idx} itemId={id} />)}
+              </div>
+            </div>
+            <div className="participant-stats">
+              <p className="gold">{(p.goldEarned / 1000).toFixed(1)}k ouro</p>
+              <p className="damage">{(p.totalDamageDealtToChampions / 1000).toFixed(1)}k dano</p>
+              <p className="vision">Vision: {p.visionScore}</p>
+            </div>
           </div>
-          <div className="participant-stats">
-            <p className="gold">{(p.goldEarned / 1000).toFixed(1)}k ouro</p>
-            <p className="damage">
-              {(p.totalDamageDealtToChampions / 1000).toFixed(1)}k dano
-            </p>
-            <p className="vision">Vision: {p.visionScore}</p>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

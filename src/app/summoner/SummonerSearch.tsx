@@ -9,6 +9,7 @@ import {
   type SummonerProfile,
 } from "@/lib/types";
 import { PerformanceChart } from "./PerformanceChart";
+import { LiveGame } from "./LiveGame";
 
 const STORAGE_KEY = "maxlol:recent_searches";
 const MAX_RECENT = 10;
@@ -77,6 +78,7 @@ export function SummonerSearch() {
   const [profile, setProfile] = useState<SummonerProfile | null>(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
   const [summaries, setSummaries] = useState<MatchSummary[] | null>(null);
+  const [champFilter, setChampFilter] = useState<string>("Todos");
 
   // Autocomplete
   const [suggestions, setSuggestions] = useState<RecentSearch[]>([]);
@@ -225,6 +227,8 @@ export function SummonerSearch() {
 
       {profile && (
         <div className="profile-card">
+          <LiveGame puuid={profile.account.puuid} region={region} />
+
           {profile.source === "mock" && (
             <p className="mock-badge">
               Dados de demonstração — chave da API da Riot não configurada.
@@ -278,7 +282,23 @@ export function SummonerSearch() {
           )}
 
           <div style={{ marginTop: "2rem" }}>
-            <h3 className="ranked-title">Últimas partidas</h3>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
+              <h3 className="ranked-title" style={{ margin: 0 }}>Últimas partidas</h3>
+              {summaries && summaries.length > 0 && (
+                <div className="tl-pills" style={{ flexWrap: "wrap" }}>
+                  {["Todos", ...Array.from(new Set(summaries.map((s) => s.championName))).sort()].map((c) => (
+                    <button
+                      key={c}
+                      className={`tl-pill ${champFilter === c ? "active" : ""}`}
+                      style={{ fontSize: "0.75rem", padding: "0.25rem 0.55rem" }}
+                      onClick={() => setChampFilter(c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {loadingMatches && (
               <div className="matches-loading">
@@ -290,7 +310,7 @@ export function SummonerSearch() {
 
             {summaries && summaries.length > 0 && (
               <div className="match-list-rich">
-                {summaries.map((s) => (
+                {summaries.filter((s) => champFilter === "Todos" || s.championName === champFilter).map((s) => (
                   <Link
                     key={s.matchId}
                     href={`/match/${s.matchId}?region=${region}&puuid=${profile.account.puuid}`}

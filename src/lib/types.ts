@@ -144,6 +144,51 @@ export interface MatchSummary {
   gameMode: string;
 }
 
+export interface LiveParticipant {
+  puuid: string;
+  summonerId: string;
+  riotId: string;
+  championId: number;
+  championName?: string;
+  teamId: number;
+  spell1Id: number;
+  spell2Id: number;
+  perks?: { perkIds: number[] };
+}
+
+export interface LiveGame {
+  gameId: number;
+  gameType: string;
+  gameStartTime: number;
+  mapId: number;
+  gameLength: number;
+  gameMode: string;
+  gameQueueConfigId: number;
+  participants: LiveParticipant[];
+  bannedChampions: Array<{ championId: number; teamId: number; pickTurn: number }>;
+}
+
+export interface LeagueEntry {
+  summonerId: string;
+  summonerName: string;
+  leaguePoints: number;
+  rank: string;
+  wins: number;
+  losses: number;
+  veteran: boolean;
+  inactive: boolean;
+  freshBlood: boolean;
+  hotStreak: boolean;
+}
+
+export interface LeagueList {
+  leagueId: string;
+  entries: LeagueEntry[];
+  tier: string;
+  name: string;
+  queue: string;
+}
+
 export const QUEUE_NAMES: Record<number, string> = {
   420: "Solo/Duo",
   440: "Flex",

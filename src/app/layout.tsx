@@ -44,6 +44,7 @@ export default function RootLayout({
               <Link href="/">Início</Link>
               <Link href="/summoner">Buscar</Link>
               <Link href="/tierlist">Tier List</Link>
+              <Link href="/leaderboard">Ranking</Link>
               <Link href="/privacy">Privacidade</Link>
               <Link href="/terms">Termos</Link>
               <Link href="/contact">Contato</Link>

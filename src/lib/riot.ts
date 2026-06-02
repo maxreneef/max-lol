@@ -4,6 +4,8 @@ import { mockProfile } from "./mock";
 import {
   PLATFORMS,
   type LeagueEntryDTO,
+  type LeagueList,
+  type LiveGame,
   type MatchDTO,
   type MatchHistory,
   type MatchSummary,
@@ -112,6 +114,55 @@ export async function getProfile(
 
 export function hasApiKey(): boolean {
   return Boolean(API_KEY);
+}
+
+export async function getLiveGame(
+  puuid: string,
+  platform: Platform
+): Promise<LiveGame | null> {
+  if (!API_KEY) return null;
+  try {
+    return await riotFetch<LiveGame>(
+      `${platformHost(platform)}/lol/spectator/v5/active-games/by-summoner/${puuid}`
+    );
+  } catch (err) {
+    if (err instanceof RiotError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export async function getLeaderboard(
+  platform: Platform,
+  queue: "RANKED_SOLO_5x5" | "RANKED_FLEX_SR" = "RANKED_SOLO_5x5",
+  tier: "challenger" | "grandmaster" | "master" = "challenger"
+): Promise<LeagueList> {
+  if (!API_KEY) {
+    return {
+      leagueId: "mock",
+      tier: tier.toUpperCase(),
+      name: "Mock League",
+      queue,
+      entries: Array.from({ length: 20 }, (_, i) => ({
+        summonerId: `mock-${i}`,
+        summonerName: `Player${i + 1}`,
+        leaguePoints: 1200 - i * 40,
+        rank: "I",
+        wins: 80 + i * 3,
+        losses: 60 + i * 2,
+        veteran: i < 3,
+        inactive: false,
+        freshBlood: i > 15,
+        hotStreak: i % 5 === 0,
+      })),
+    };
+  }
+
+  const key = `leaderboard:${platform}:${queue}:${tier}`;
+  return cached(key, 300_000, () =>
+    riotFetch<LeagueList>(
+      `${platformHost(platform)}/lol/league/v4/${tier}leagues/by-queue/${queue}`
+    )
+  );
 }
 
 export async function getMatchHistory(

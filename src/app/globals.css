@@ -487,6 +487,170 @@ a:hover {
   color: var(--muted);
 }
 
+/* Live game */
+.live-banner {
+  background: rgba(255, 70, 70, 0.06);
+  border: 1px solid rgba(255, 70, 70, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.live-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.9rem;
+  font-size: 0.88rem;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff4444;
+  animation: pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.live-queue {
+  color: var(--muted);
+}
+
+.live-elapsed {
+  margin-left: auto;
+  font-weight: 700;
+  color: #ff4444;
+}
+
+.live-teams {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.live-team {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.live-vs {
+  align-self: center;
+  font-weight: 800;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 0 0.5rem;
+}
+
+.live-player {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+}
+
+.live-player.live-highlight {
+  background: rgba(200, 155, 60, 0.12);
+  border: 1px solid rgba(200, 155, 60, 0.3);
+}
+
+.live-champ-icon {
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.live-name {
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+/* Items row in match detail */
+.items-row {
+  display: flex;
+  gap: 2px;
+  margin-top: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.item-slot {
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.item-slot.empty {
+  width: 24px;
+  height: 24px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+/* Leaderboard */
+.lb-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.lb-table-wrap {
+  overflow-x: auto;
+}
+
+.lb-rank {
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.lb-top1 { color: #c89b3c; }
+.lb-top2 { color: #adb5bd; }
+.lb-top3 { color: #cd7f32; }
+
+.lb-name {
+  font-weight: 500;
+}
+
+.lb-badge {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.4rem;
+  font-weight: 600;
+}
+
+.lb-vet {
+  background: rgba(200, 155, 60, 0.15);
+  color: var(--accent);
+}
+
+.lb-new {
+  background: rgba(10, 200, 185, 0.12);
+  color: var(--accent-2);
+}
+
+.lb-search-btn {
+  font-size: 0.8rem;
+  color: var(--accent-2);
+  white-space: nowrap;
+}
+
+.lb-search-btn:hover {
+  text-decoration: underline;
+}
+
 /* Performance chart */
 .perf-chart-section {
   margin-top: 2rem;
