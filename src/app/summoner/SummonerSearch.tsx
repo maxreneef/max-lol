@@ -415,7 +415,7 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
                     </div>
                     <div className="match-card-stats">
                       <p>{(s.totalDamageDealtToChampions / 1000).toFixed(1)}k dano</p>
-                      <p>{(s.goldEarned / 1000).toFixed(1)}k ouro</p>
+                      <p>{(s.cs ?? 0)} CS ({((s.cs ?? 0) / Math.max(s.gameDuration / 60, 1)).toFixed(1)}/min)</p>
                       <p>{formatDuration(s.gameDuration)}</p>
                     </div>
                     <div className="match-grade" style={{ color: GRADE_COLORS[calcGrade(s, summaries ?? [])] }}>

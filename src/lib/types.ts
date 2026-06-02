@@ -151,6 +151,7 @@ export interface MatchSummary {
   gameDuration: number;   // segundos
   gameCreation: number;   // timestamp ms
   gameMode: string;
+  cs: number;             // totalMinionsKilled + neutralMinionsKilled
 }
 
 export interface LiveParticipant {

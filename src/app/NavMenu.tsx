@@ -29,8 +29,10 @@ const NAV: NavGroup[] = [
   {
     label: "Jogo",
     items: [
-      { href: "/items",  label: "Itens",  desc: "Banco de dados completo" },
-      { href: "/runes",  label: "Runas",  desc: "Todas as árvores de runas" },
+      { href: "/items",   label: "Itens",        desc: "Banco de dados completo" },
+      { href: "/runes",   label: "Runas",        desc: "Todas as árvores de runas" },
+      { href: "/patches", label: "Patch Notes",  desc: "Últimas atualizações do jogo" },
+      { href: "/about",   label: "Sobre",        desc: "Sobre o Max LoL" },
     ],
   },
 ];

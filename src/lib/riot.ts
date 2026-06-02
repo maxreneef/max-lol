@@ -237,6 +237,7 @@ export async function getMatchSummaries(
       gameDuration: Math.floor(Math.random() * 1800) + 1200,
       gameCreation: Date.now() - i * 3_600_000,
       gameMode: "CLASSIC",
+      cs: Math.floor(Math.random() * 200) + 80,
     }));
   }
 
@@ -266,6 +267,7 @@ export async function getMatchSummaries(
           gameDuration: match.info.gameDuration,
           gameCreation: match.info.gameCreation,
           gameMode: match.info.gameMode,
+          cs: (p.totalMinionsKilled ?? 0) + (p.neutralMinionsKilled ?? 0),
         });
       } catch {
         // Ignora partidas com erro e continua

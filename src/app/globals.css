@@ -348,6 +348,73 @@ a:hover {
   cursor: not-allowed;
 }
 
+/* Patch notes */
+.patch-featured {
+  display: block;
+  background: linear-gradient(135deg, rgba(200,155,60,0.1), rgba(10,200,185,0.05));
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: inherit;
+  margin-bottom: 1rem;
+  transition: border-color 0.15s;
+}
+
+.patch-featured:hover {
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+.patch-featured-content h2 {
+  font-size: 1.8rem;
+  margin: 0.4rem 0 0.25rem;
+}
+
+.patch-badge {
+  background: var(--accent);
+  color: #1a1206;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+}
+
+.patch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.patch-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+
+.patch-row:hover {
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+.patch-version {
+  font-weight: 700;
+  min-width: 60px;
+}
+
+.patch-link {
+  margin-left: auto;
+  color: var(--accent-2);
+  font-size: 0.85rem;
+}
+
 /* Theme toggle */
 .theme-btn {
   background: none;
