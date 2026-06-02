@@ -50,6 +50,7 @@ export default function RootLayout({
               <Link href="/compare">Comparar</Link>
               <Link href="/rotation">Rotação</Link>
               <Link href="/items">Itens</Link>
+              <Link href="/runes">Runas</Link>
               <Link href="/privacy">Privacidade</Link>
               <Link href="/terms">Termos</Link>
               <Link href="/contact">Contato</Link>

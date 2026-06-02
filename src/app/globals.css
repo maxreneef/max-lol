@@ -1680,6 +1680,117 @@ a.lobby-name:hover {
   font-weight: 500;
 }
 
+/* Home search */
+.home-search-form {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 640px;
+  margin: 0 auto 1rem;
+}
+
+.home-search-input {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 0.8rem 1rem;
+  font-size: 1rem;
+}
+
+.home-search-input:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+.home-search-select {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 0.8rem 0.9rem;
+  font-size: 0.95rem;
+}
+
+/* Rune trees */
+.rune-trees {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
+}
+
+.rune-tree-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border-top: 3px solid var(--tree-color, var(--accent));
+}
+
+.rune-tree-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rune-tree-icon {
+  border-radius: 50%;
+}
+
+.rune-slot {
+  margin-bottom: 0.9rem;
+}
+
+.rune-slot-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.4rem;
+}
+
+.rune-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rune-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.4rem;
+  flex: 1 1 140px;
+  min-width: 0;
+}
+
+.rune-item.rune-keystone {
+  flex: 1 1 180px;
+}
+
+.rune-item-icon {
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.rune-item-name {
+  font-weight: 600;
+  font-size: 0.82rem;
+  margin-bottom: 0.15rem;
+}
+
+.rune-item-desc {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.4;
+}
+
 /* Mastery section */
 .mastery-section {
   margin-top: 2rem;
@@ -2308,6 +2419,30 @@ a.lobby-name:hover {
   /* Live game */
   .live-name {
     max-width: 80px;
+  }
+
+  /* Items */
+  .items-main {
+    grid-template-columns: 1fr;
+  }
+
+  .item-detail-panel {
+    position: static;
+  }
+
+  /* Runes */
+  .rune-trees {
+    grid-template-columns: 1fr;
+  }
+
+  /* Home search */
+  .home-search-form {
+    flex-direction: column;
+  }
+
+  .home-search-input,
+  .home-search-select {
+    width: 100%;
   }
 
   /* Champion page */

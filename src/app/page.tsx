@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { HomeSearch } from "./HomeSearch";
 
 export const metadata: Metadata = {
   title: "Max LoL — Estatísticas de League of Legends",
@@ -18,13 +19,12 @@ export default function Home() {
             Perfis de invocador, histórico de partidas, tier lists, análise de
             lobby e muito mais — focado no servidor brasileiro.
           </p>
-          <div className="home-cta">
-            <Link href="/summoner" className="btn btn-primary btn-lg">
-              Buscar invocador →
-            </Link>
-            <Link href="/tierlist" className="btn btn-lg">
-              Ver Tier List
-            </Link>
+          <HomeSearch />
+
+          <div className="home-cta" style={{ marginTop: "1rem" }}>
+            <Link href="/tierlist" className="btn btn-lg">Tier List</Link>
+            <Link href="/rotation" className="btn btn-lg">Rotação gratuita</Link>
+            <Link href="/items" className="btn btn-lg">Itens</Link>
           </div>
         </div>
       </section>
