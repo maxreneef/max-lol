@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { MatchDTO } from "@/lib/types";
+import { PostGameAnalysis } from "./PostGameAnalysis";
 
 // gameDuration vem em SEGUNDOS na API v5
 function formatDuration(seconds: number): string {
@@ -92,6 +93,8 @@ export function MatchDetail() {
         <TeamSection participants={blueParticipants} puuid={puuid} />
         <TeamSection participants={redParticipants} puuid={puuid} />
       </div>
+
+      {puuid && <PostGameAnalysis match={match} puuid={puuid} />}
 
       <div style={{ marginTop: "2rem" }}>
         <Link href="/summoner" className="btn">
