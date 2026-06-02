@@ -15,6 +15,8 @@ import { ChampStats } from "./ChampStats";
 import { MasterySection } from "./MasterySection";
 import { RecentForm } from "./RecentForm";
 import { ProfileSkeleton } from "./ProfileSkeleton";
+import { SummonerScore } from "./SummonerScore";
+import { ApiKeyBanner } from "./ApiKeyBanner";
 
 /* ── localStorage helpers ── */
 const SEARCH_KEY = "maxlol:recent_searches";
@@ -285,13 +287,8 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
 
       {!loading && profile && (
         <div className="profile-card">
+          <ApiKeyBanner profile={profile} />
           <LiveGame puuid={profile.account.puuid} region={region} />
-
-          {profile.source === "mock" && (
-            <p className="mock-badge">
-              Dados de demonstração — chave da API não configurada.
-            </p>
-          )}
 
           <div className="profile-header">
             <img
@@ -346,6 +343,7 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
             </div>
           )}
 
+          <SummonerScore profile={profile} summaries={summaries} />
           {summaries && summaries.length > 0 && <RecentForm summaries={summaries} />}
           <MasterySection puuid={profile.account.puuid} region={region} />
 
