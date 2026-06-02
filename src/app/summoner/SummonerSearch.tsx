@@ -423,7 +423,6 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
                       {calcGrade(s, summaries ?? [])}
                     </div>
                     <div className={`match-outcome ${s.win ? "win" : "loss"}`}>{s.win ? "V" : "D"}</div>
-
                   </Link>
                 ))}
               </div>

@@ -149,12 +149,22 @@ export function LeaderboardClient() {
                       {e.wins + e.losses}
                     </td>
                     <td>
-                      <Link
-                        href={`/summoner?riotId=${encodeURIComponent(e.summonerName)}&region=${region}`}
-                        className="lb-search-btn"
-                      >
-                        Ver perfil →
-                      </Link>
+                      {e.summonerName.includes("#") ? (
+                        <Link
+                          href={`/summoner?riotId=${encodeURIComponent(e.summonerName)}&region=${region}`}
+                          className="lb-search-btn"
+                        >
+                          Ver perfil →
+                        </Link>
+                      ) : (
+                        <span
+                          className="lb-search-btn"
+                          style={{ cursor: "default", opacity: 0.5 }}
+                          title="Riot ID completo não disponível nesta fila"
+                        >
+                          {e.summonerName}
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
