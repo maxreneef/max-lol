@@ -8,6 +8,17 @@
   --accent-2: #0ac8b9;
 }
 
+/* Light theme */
+[data-theme="light"] {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --border: #dde1e9;
+  --text: #1a1f2e;
+  --muted: #6b7280;
+  --accent: #b8860b;
+  --accent-2: #0891b2;
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -336,6 +347,72 @@ a:hover {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Theme toggle */
+.theme-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--text);
+  transition: background 0.15s;
+}
+
+.theme-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+/* Recent form */
+.recent-form {
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.form-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.form-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.form-dot-win  { background: #51cf66; }
+.form-dot-loss { background: #ff6b6b; }
+
+.form-stats {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.form-streak {
+  font-weight: 600;
+  font-size: 0.88rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+}
+
+.form-streak-win  { background: rgba(81,207,102,0.12); color: #51cf66; }
+.form-streak-loss { background: rgba(255,107,107,0.12); color: #ff6b6b; }
+
+.form-trend { font-weight: 600; font-size: 0.88rem; }
+.form-trend-up     { color: #51cf66; }
+.form-trend-down   { color: #ff6b6b; }
+.form-trend-stable { color: var(--muted); }
 
 /* Match grade badge */
 .match-grade {

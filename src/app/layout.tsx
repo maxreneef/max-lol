@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { NavMenu } from "./NavMenu";
 import { MobileNav } from "./MobileNav";
+import { ThemeToggle } from "./ThemeToggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -43,6 +44,7 @@ export default function RootLayout({
               Max<span> LoL</span>
             </Link>
             <NavMenu />
+            <ThemeToggle />
             <MobileNav />
           </div>
         </header>
