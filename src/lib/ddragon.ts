@@ -21,6 +21,7 @@ export interface DDChampionFull extends DDChampion {
   spells: DDSpell[];
   passive: { name: string; description: string; image: { full: string } };
   lore: string;
+  skins: Array<{ id: string; num: number; name: string; chromas: boolean }>;
 }
 
 export interface DDChampion {
@@ -43,6 +44,14 @@ export interface DDChampion {
     difficulty: number;
   };
   partype: string;
+}
+
+export function splashArt(champId: string, skinNum: number = 0): string {
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champId}_${skinNum}.jpg`;
+}
+
+export function loadingScreen(champId: string, skinNum: number = 0): string {
+  return `https://ddragon.leagueoflegends.com/cdn/img/champion/loading/${champId}_${skinNum}.jpg`;
 }
 
 export async function fetchChampionDetail(id: string): Promise<DDChampionFull | null> {

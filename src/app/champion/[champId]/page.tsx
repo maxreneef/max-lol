@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { fetchChampions, fetchChampionDetail, mockTierStats, primaryRole, DD_BASE } from "@/lib/ddragon";
+import { fetchChampions, fetchChampionDetail, mockTierStats, primaryRole, DD_BASE, splashArt } from "@/lib/ddragon";
+import { SkinGallery } from "./SkinGallery";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -159,6 +160,17 @@ export default async function ChampionPage({
           </div>
         ))}
       </div>
+
+      {/* Splash art hero */}
+      <div className="splash-hero" style={{ backgroundImage: `url(${splashArt(champ.id, 0)})` }} />
+
+      {/* Skins */}
+      {detail?.skins && detail.skins.length > 1 && (
+        <>
+          <h2 className="section-title">Skins</h2>
+          <SkinGallery champId={champ.id} skins={detail.skins} />
+        </>
+      )}
 
       {/* Lore */}
       {detail?.lore && (
