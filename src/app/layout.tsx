@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Script from "next/script";
 import { NavMenu } from "./NavMenu";
 import { MobileNav } from "./MobileNav";
 import { ThemeToggle } from "./ThemeToggle";
+import { CookieConsent } from "@/components/CookieConsent";
+import { SupportButton } from "@/components/SupportButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,6 +33,8 @@ export const metadata: Metadata = {
   },
 };
 
+const PUB_ID = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID;
+
 export default function RootLayout({
   children,
 }: {
@@ -38,17 +43,34 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
+        {/* Google AdSense — ativa automaticamente após aprovação */}
+        {PUB_ID && (
+          <Script
+            async
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${PUB_ID}`}
+            crossOrigin="anonymous"
+            strategy="lazyOnload"
+          />
+        )}
+
         <header className="site-header">
           <div className="inner">
             <Link href="/" className="brand">
               Max<span> LoL</span>
             </Link>
             <NavMenu />
-            <ThemeToggle />
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Link href="/suporte" className="support-nav-link" title="Apoiar o Max LoL">
+                ☕ Apoiar
+              </Link>
+              <ThemeToggle />
+            </div>
             <MobileNav />
           </div>
         </header>
+
         {children}
+
         <footer className="site-footer">
           <div className="footer-inner">
             <div className="footer-brand">
@@ -86,6 +108,7 @@ export default function RootLayout({
               </div>
               <div className="footer-col">
                 <p className="footer-col-title">Institucional</p>
+                <Link href="/suporte">Apoiar ☕</Link>
                 <Link href="/about">Sobre</Link>
                 <Link href="/privacy">Privacidade</Link>
                 <Link href="/terms">Termos</Link>
@@ -94,9 +117,14 @@ export default function RootLayout({
             </div>
           </div>
           <div className="footer-bottom">
-            Max LoL isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties.
+            Max LoL isn&apos;t endorsed by Riot Games and doesn&apos;t reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties.{" "}
+            <Link href="/privacy" style={{ color: "inherit", textDecoration: "underline" }}>Política de Privacidade</Link>{" "}·{" "}
+            <Link href="/suporte" style={{ color: "inherit", textDecoration: "underline" }}>Divulgação de Afiliados</Link>
           </div>
         </footer>
+
+        <SupportButton />
+        <CookieConsent />
       </body>
     </html>
   );
