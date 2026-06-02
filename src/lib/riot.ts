@@ -191,7 +191,8 @@ export async function getMatchHistory(
 export async function getMatchSummaries(
   puuid: string,
   platform: Platform,
-  count: number = 20
+  count: number = 20,
+  start: number = 0
 ): Promise<MatchSummary[]> {
   if (!API_KEY) {
     // Mock com dados variados para demonstração
@@ -213,10 +214,10 @@ export async function getMatchSummaries(
     }));
   }
 
-  const key = `summaries:${platform}:${puuid}:${count}`;
+  const key = `summaries:${platform}:${puuid}:${start}:${count}`;
   return cached(key, 120_000, async () => {
     const ids = await riotFetch<string[]>(
-      `${regionalHost(platform)}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=0&count=${count}`
+      `${regionalHost(platform)}/lol/match/v5/matches/by-puuid/${puuid}/ids?start=${start}&count=${count}`
     );
 
     const summaries: MatchSummary[] = [];

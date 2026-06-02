@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const puuid = (searchParams.get("puuid") ?? "").trim();
   const region = (searchParams.get("region") ?? "br1").trim();
   const count = Math.min(parseInt(searchParams.get("count") ?? "20"), 20);
+  const start = Math.max(parseInt(searchParams.get("start") ?? "0"), 0);
 
   if (!puuid) {
     return NextResponse.json({ error: "PUUID é obrigatório." }, { status: 400 });
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const summaries = await getMatchSummaries(puuid, region, count);
+    const summaries = await getMatchSummaries(puuid, region, count, start);
     return NextResponse.json(summaries);
   } catch (err) {
     if (err instanceof RiotError) {

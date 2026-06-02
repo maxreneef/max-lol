@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import {
   PLATFORMS,
@@ -12,169 +12,228 @@ import { PerformanceChart } from "./PerformanceChart";
 import { LiveGame } from "./LiveGame";
 import { ChampStats } from "./ChampStats";
 
-const STORAGE_KEY = "maxlol:recent_searches";
+/* ── localStorage helpers ── */
+const SEARCH_KEY = "maxlol:recent_searches";
+const FAV_KEY    = "maxlol:favorites";
 const MAX_RECENT = 10;
+const MAX_FAV    = 20;
 
-interface RecentSearch {
-  riotId: string;
-  region: string;
+interface SavedEntry { riotId: string; region: string }
+
+function loadList(key: string): SavedEntry[] {
+  try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; }
+}
+function saveList(key: string, list: SavedEntry[]) {
+  localStorage.setItem(key, JSON.stringify(list));
+}
+function upsert(list: SavedEntry[], entry: SavedEntry, max: number): SavedEntry[] {
+  const next = list.filter((s) => !(s.riotId === entry.riotId && s.region === entry.region));
+  next.unshift(entry);
+  return next.slice(0, max);
+}
+function remove(list: SavedEntry[], entry: SavedEntry): SavedEntry[] {
+  return list.filter((s) => !(s.riotId === entry.riotId && s.region === entry.region));
 }
 
-function loadRecent(): RecentSearch[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveSearch(riotId: string, region: string) {
-  const recent = loadRecent().filter(
-    (s) => !(s.riotId === riotId && s.region === region)
-  );
-  recent.unshift({ riotId, region });
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(recent.slice(0, MAX_RECENT)));
-}
-
+/* ── misc utils ── */
 const QUEUE_LABELS: Record<string, string> = {
   RANKED_SOLO_5x5: "Ranqueada Solo/Duo",
   RANKED_FLEX_SR: "Ranqueada Flex",
 };
-
-function winRate(wins: number, losses: number): string {
-  const total = wins + losses;
-  if (total === 0) return "0%";
-  return `${Math.round((wins / total) * 100)}%`;
+function winRate(wins: number, losses: number) {
+  const t = wins + losses;
+  return t ? `${Math.round((wins / t) * 100)}%` : "0%";
 }
-
-function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}m ${s}s`;
+function formatDuration(s: number) {
+  return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
-
-function timeAgo(timestamp: number): string {
-  const diff = Date.now() - timestamp;
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 60) return `${mins}m atrás`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h atrás`;
-  const days = Math.floor(hours / 24);
-  return `${days}d atrás`;
+function timeAgo(ts: number) {
+  const d = Date.now() - ts;
+  const m = Math.floor(d / 60_000);
+  if (m < 60) return `${m}m atrás`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h atrás`;
+  return `${Math.floor(h / 24)}d atrás`;
 }
-
-function kdaColor(deaths: number, kills: number, assists: number): string {
-  const kda = (kills + assists) / Math.max(deaths, 1);
-  if (kda >= 4) return "#51cf66";
-  if (kda >= 2.5) return "var(--accent-2)";
-  if (kda >= 1.5) return "var(--text)";
+function kdaColor(k: number, d: number, a: number) {
+  const r = (k + a) / Math.max(d, 1);
+  if (r >= 4) return "#51cf66";
+  if (r >= 2.5) return "var(--accent-2)";
+  if (r >= 1.5) return "var(--text)";
   return "#ff6b6b";
 }
 
-export function SummonerSearch() {
-  const [riotId, setRiotId] = useState("");
-  const [region, setRegion] = useState("br1");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [profile, setProfile] = useState<SummonerProfile | null>(null);
+/* ── component ── */
+interface Props {
+  searchParamsPromise: Promise<{ riotId?: string; region?: string }>;
+}
+
+export function SummonerSearch({ searchParamsPromise }: Props) {
+  const searchParams = use(searchParamsPromise);
+
+  const [riotId, setRiotId] = useState(searchParams.riotId ?? "");
+  const [region, setRegion] = useState(searchParams.region ?? "br1");
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState<string | null>(null);
+  const [profile, setProfile]           = useState<SummonerProfile | null>(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
-  const [summaries, setSummaries] = useState<MatchSummary[] | null>(null);
-  const [champFilter, setChampFilter] = useState<string>("Todos");
+  const [summaries, setSummaries]       = useState<MatchSummary[] | null>(null);
+  const [champFilter, setChampFilter]   = useState("Todos");
+  const [page, setPage]                 = useState(0);          // paginação
+  const [hasMore, setHasMore]           = useState(false);
+  const [loadingMore, setLoadingMore]   = useState(false);
 
   // Autocomplete
-  const [suggestions, setSuggestions] = useState<RecentSearch[]>([]);
+  const [suggestions, setSuggestions]   = useState<SavedEntry[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [recentAll, setRecentAll] = useState<RecentSearch[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const [recents, setRecents]           = useState<SavedEntry[]>([]);
+  const inputRef    = useRef<HTMLInputElement>(null);
+  const sugRef      = useRef<HTMLDivElement>(null);
 
+  // Favoritos
+  const [favorites, setFavorites]       = useState<SavedEntry[]>([]);
+  const isFav = profile
+    ? favorites.some((f) => f.riotId === riotId && f.region === region)
+    : false;
+
+  // Init localStorage
   useEffect(() => {
-    setRecentAll(loadRecent());
+    setRecents(loadList(SEARCH_KEY));
+    setFavorites(loadList(FAV_KEY));
   }, []);
 
+  // Auto-search se vier URL params
   useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      if (
-        !inputRef.current?.contains(e.target as Node) &&
-        !suggestionsRef.current?.contains(e.target as Node)
-      ) {
+    if (searchParams.riotId?.includes("#")) {
+      doSearch(searchParams.riotId, searchParams.region ?? "br1");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      if (!inputRef.current?.contains(e.target as Node) &&
+          !sugRef.current?.contains(e.target as Node)) {
         setShowSuggestions(false);
       }
     }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  function handleInputChange(value: string) {
-    setRiotId(value);
-    const q = value.toLowerCase().trim();
-    const filtered = recentAll.filter((s) =>
-      s.riotId.toLowerCase().includes(q)
-    );
-    setSuggestions(q.length === 0 ? recentAll : filtered);
-    setShowSuggestions((q.length === 0 ? recentAll : filtered).length > 0);
+  function handleInputChange(val: string) {
+    setRiotId(val);
+    const q = val.toLowerCase().trim();
+    const all = loadList(SEARCH_KEY);
+    const filtered = q ? all.filter((s) => s.riotId.toLowerCase().includes(q)) : all;
+    setSuggestions(filtered);
+    setShowSuggestions(filtered.length > 0);
   }
 
   function handleFocus() {
-    const recent = loadRecent();
-    setRecentAll(recent);
-    setSuggestions(riotId.trim() ? recent.filter((s) => s.riotId.toLowerCase().includes(riotId.toLowerCase())) : recent);
-    setShowSuggestions(recent.length > 0);
+    const all = loadList(SEARCH_KEY);
+    setRecents(all);
+    setSuggestions(all);
+    setShowSuggestions(all.length > 0);
   }
 
-  function applySuggestion(s: RecentSearch) {
+  function applySuggestion(s: SavedEntry) {
     setRiotId(s.riotId);
     setRegion(s.region);
     setShowSuggestions(false);
     setTimeout(() => inputRef.current?.focus(), 0);
   }
 
-  async function fetchSummaries(puuid: string, reg: string) {
-    setLoadingMatches(true);
-    setSummaries(null);
-    try {
-      const res = await fetch(
-        `/api/matches/summary?puuid=${encodeURIComponent(puuid)}&region=${reg}&count=20`
-      );
-      const data = await res.json();
-      if (res.ok) setSummaries(data as MatchSummary[]);
-    } catch {
-      console.error("Erro ao buscar histórico");
-    } finally {
-      setLoadingMatches(false);
-    }
+  function toggleFav() {
+    if (!profile) return;
+    const entry = { riotId, region };
+    const current = loadList(FAV_KEY);
+    const next = isFav ? remove(current, entry) : upsert(current, entry, MAX_FAV);
+    saveList(FAV_KEY, next);
+    setFavorites(next);
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function fetchSummaries(puuid: string, reg: string, startPage = 0, append = false) {
+    const start = startPage * 20;
+    if (!append) { setLoadingMatches(true); setSummaries(null); }
+    else setLoadingMore(true);
+
+    try {
+      const res = await fetch(
+        `/api/matches/summary?puuid=${encodeURIComponent(puuid)}&region=${reg}&count=20&start=${start}`
+      );
+      const data = await res.json();
+      if (res.ok) {
+        const newItems = data as MatchSummary[];
+        setSummaries((prev) => append && prev ? [...prev, ...newItems] : newItems);
+        setHasMore(newItems.length === 20);
+        setPage(startPage);
+      }
+    } catch { console.error("Erro ao buscar histórico"); }
+    finally { setLoadingMatches(false); setLoadingMore(false); }
+  }
+
+  async function doSearch(id: string, reg: string) {
     setShowSuggestions(false);
     setError(null);
     setProfile(null);
     setSummaries(null);
+    setPage(0);
+    setHasMore(false);
+    setChampFilter("Todos");
     setLoading(true);
+
     try {
-      const res = await fetch(
-        `/api/summoner?riotId=${encodeURIComponent(riotId)}&region=${region}`
-      );
+      const res = await fetch(`/api/summoner?riotId=${encodeURIComponent(id)}&region=${reg}`);
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Erro ao buscar invocador.");
       } else {
-        const profileData = data as SummonerProfile;
-        setProfile(profileData);
-        saveSearch(riotId, region);
-        setRecentAll(loadRecent());
-        fetchSummaries(profileData.account.puuid, region);
+        const p = data as SummonerProfile;
+        setProfile(p);
+        // salva em recentes
+        const newRecents = upsert(loadList(SEARCH_KEY), { riotId: id, region: reg }, MAX_RECENT);
+        saveList(SEARCH_KEY, newRecents);
+        setRecents(newRecents);
+        fetchSummaries(p.account.puuid, reg, 0, false);
       }
-    } catch {
-      setError("Falha de rede. Tente novamente.");
-    } finally {
-      setLoading(false);
-    }
+    } catch { setError("Falha de rede. Tente novamente."); }
+    finally { setLoading(false); }
   }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    doSearch(riotId, region);
+  }
+
+  const filteredSummaries = summaries?.filter(
+    (s) => champFilter === "Todos" || s.championName === champFilter
+  ) ?? [];
 
   return (
     <div>
+      {/* Favoritos */}
+      {favorites.length > 0 && !profile && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <p style={{ color: "var(--muted)", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
+            ⭐ Favoritos
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.4rem" }}>
+            {favorites.map((f) => (
+              <button
+                key={`${f.riotId}-${f.region}`}
+                className="tl-pill"
+                onClick={() => { setRiotId(f.riotId); setRegion(f.region); doSearch(f.riotId, f.region); }}
+              >
+                {f.riotId} <span style={{ color: "var(--accent)", marginLeft: "0.3rem" }}>{f.region.toUpperCase()}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Form */}
       <form onSubmit={handleSubmit} className="search-form">
         <div style={{ position: "relative", flex: "1 1 220px" }}>
           <input
@@ -190,7 +249,7 @@ export function SummonerSearch() {
             style={{ width: "100%" }}
           />
           {showSuggestions && suggestions.length > 0 && (
-            <div ref={suggestionsRef} className="suggestions-dropdown">
+            <div ref={sugRef} className="suggestions-dropdown">
               <p className="suggestions-label">Buscas recentes</p>
               {suggestions.map((s) => (
                 <button
@@ -200,23 +259,15 @@ export function SummonerSearch() {
                   onMouseDown={() => applySuggestion(s)}
                 >
                   <span className="suggestion-name">{s.riotId}</span>
-                  <span className="suggestion-region">
-                    {s.region.toUpperCase()}
-                  </span>
+                  <span className="suggestion-region">{s.region.toUpperCase()}</span>
                 </button>
               ))}
             </div>
           )}
         </div>
-        <select
-          value={region}
-          onChange={(e) => setRegion(e.target.value)}
-          aria-label="Região"
-        >
-          {Object.entries(PLATFORMS).map(([value, { label }]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
+        <select value={region} onChange={(e) => setRegion(e.target.value)} aria-label="Região">
+          {Object.entries(PLATFORMS).map(([v, { label }]) => (
+            <option key={v} value={v}>{label}</option>
           ))}
         </select>
         <button type="submit" disabled={loading}>
@@ -224,7 +275,7 @@ export function SummonerSearch() {
         </button>
       </form>
 
-      {error && <p className="search-error">{error}</p>}
+      {error && <p className="search-error" style={{ marginTop: "1rem" }}>{error}</p>}
 
       {profile && (
         <div className="profile-card">
@@ -232,27 +283,43 @@ export function SummonerSearch() {
 
           {profile.source === "mock" && (
             <p className="mock-badge">
-              Dados de demonstração — chave da API da Riot não configurada.
+              Dados de demonstração — chave da API não configurada.
             </p>
           )}
+
           <div className="profile-header">
             <img
               src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/profileicon/${profile.summoner.profileIconId}.png`}
-              alt="Ícone de perfil"
-              width={72}
-              height={72}
+              alt="Ícone"
+              width={72} height={72}
               className="profile-icon"
             />
-            <div>
+            <div style={{ flex: 1 }}>
               <h2>
                 {profile.account.gameName}
                 <span className="tag">#{profile.account.tagLine}</span>
               </h2>
-              <p className="level">
-                Nível {profile.summoner.summonerLevel} ·{" "}
-                {profile.region.toUpperCase()}
-              </p>
+              <p className="level">Nível {profile.summoner.summonerLevel} · {profile.region.toUpperCase()}</p>
             </div>
+            {/* Botão favoritar */}
+            <button
+              onClick={toggleFav}
+              title={isFav ? "Remover dos favoritos" : "Adicionar aos favoritos"}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.4rem", lineHeight: 1 }}
+            >
+              {isFav ? "⭐" : "☆"}
+            </button>
+            {/* Link compartilhar */}
+            <button
+              title="Copiar link do perfil"
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.1rem", lineHeight: 1, color: "var(--muted)" }}
+              onClick={() => {
+                const url = `${location.origin}/summoner?riotId=${encodeURIComponent(riotId)}&region=${region}`;
+                navigator.clipboard.writeText(url).then(() => alert("Link copiado!"));
+              }}
+            >
+              🔗
+            </button>
           </div>
 
           <h3 className="ranked-title">Filas ranqueadas</h3>
@@ -262,15 +329,10 @@ export function SummonerSearch() {
             <div className="ranked-grid">
               {profile.ranked.map((entry) => (
                 <div key={entry.leagueId} className="ranked-card">
-                  <p className="queue">
-                    {QUEUE_LABELS[entry.queueType] ?? entry.queueType}
-                  </p>
-                  <p className="tier">
-                    {entry.tier} {entry.rank} · {entry.leaguePoints} LP
-                  </p>
+                  <p className="queue">{QUEUE_LABELS[entry.queueType] ?? entry.queueType}</p>
+                  <p className="tier">{entry.tier} {entry.rank} · {entry.leaguePoints} LP</p>
                   <p className="record">
-                    {entry.wins}V {entry.losses}D ·{" "}
-                    <strong>{winRate(entry.wins, entry.losses)}</strong> WR
+                    {entry.wins}V {entry.losses}D · <strong>{winRate(entry.wins, entry.losses)}</strong> WR
                     {entry.hotStreak && " · 🔥"}
                   </p>
                 </div>
@@ -286,6 +348,7 @@ export function SummonerSearch() {
             <ChampStats summaries={summaries} />
           )}
 
+          {/* Últimas partidas */}
           <div style={{ marginTop: "2rem" }}>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap", marginBottom: "0.75rem" }}>
               <h3 className="ranked-title" style={{ margin: 0 }}>Últimas partidas</h3>
@@ -313,9 +376,9 @@ export function SummonerSearch() {
               </div>
             )}
 
-            {summaries && summaries.length > 0 && (
+            {filteredSummaries.length > 0 && (
               <div className="match-list-rich">
-                {summaries.filter((s) => champFilter === "Todos" || s.championName === champFilter).map((s) => (
+                {filteredSummaries.map((s) => (
                   <Link
                     key={s.matchId}
                     href={`/match/${s.matchId}?region=${region}&puuid=${profile.account.puuid}`}
@@ -325,35 +388,23 @@ export function SummonerSearch() {
                     <img
                       src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${s.championName}.png`}
                       alt={s.championName}
-                      width={44}
-                      height={44}
+                      width={44} height={44}
                       className="match-champ-icon"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                     <div className="match-card-main">
                       <p className="match-queue">
                         {QUEUE_NAMES[s.queueId] ?? s.gameMode}
-                        <span className="match-time">
-                          {" · "}
-                          {timeAgo(s.gameCreation)}
-                        </span>
+                        <span className="match-time"> · {timeAgo(s.gameCreation)}</span>
                       </p>
                       <p className="match-champ-name">{s.championName}</p>
                     </div>
                     <div className="match-card-kda">
-                      <p
-                        className="match-kda-value"
-                        style={{
-                          color: kdaColor(s.deaths, s.kills, s.assists),
-                        }}
-                      >
+                      <p className="match-kda-value" style={{ color: kdaColor(s.kills, s.deaths, s.assists) }}>
                         {s.kills} / {s.deaths} / {s.assists}
                       </p>
                       <p className="match-kda-ratio">
-                        {((s.kills + s.assists) / Math.max(s.deaths, 1)).toFixed(1)}{" "}
-                        KDA
+                        {((s.kills + s.assists) / Math.max(s.deaths, 1)).toFixed(1)} KDA
                       </p>
                     </div>
                     <div className="match-card-stats">
@@ -361,16 +412,26 @@ export function SummonerSearch() {
                       <p>{(s.goldEarned / 1000).toFixed(1)}k ouro</p>
                       <p>{formatDuration(s.gameDuration)}</p>
                     </div>
-                    <div className={`match-outcome ${s.win ? "win" : "loss"}`}>
-                      {s.win ? "V" : "D"}
-                    </div>
+                    <div className={`match-outcome ${s.win ? "win" : "loss"}`}>{s.win ? "V" : "D"}</div>
                   </Link>
                 ))}
               </div>
             )}
 
-            {summaries && summaries.length === 0 && (
-              <p style={{ color: "var(--muted)" }}>Sem partidas recentes.</p>
+            {summaries && filteredSummaries.length === 0 && !loadingMatches && (
+              <p style={{ color: "var(--muted)" }}>Nenhuma partida com este campeão.</p>
+            )}
+
+            {/* Carregar mais */}
+            {hasMore && champFilter === "Todos" && (
+              <button
+                className="btn"
+                style={{ marginTop: "1rem", width: "100%" }}
+                disabled={loadingMore}
+                onClick={() => fetchSummaries(profile.account.puuid, region, page + 1, true)}
+              >
+                {loadingMore ? "Carregando..." : "Carregar mais 20 partidas"}
+              </button>
             )}
           </div>
         </div>
