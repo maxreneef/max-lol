@@ -4821,6 +4821,217 @@ a.lobby-name:hover {
   letter-spacing: 0.06em;
 }
 
+/* ══════════════════════════════════════════════════════════
+   BUILD COMPACT GRID — estilo onetricks.gg
+   ═══════════════════════════════════════════════════════════ */
+
+.build-compact-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.build-col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.build-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.6rem 0.7rem;
+}
+
+.build-card-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0 0 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.build-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0;
+}
+
+.build-card-row + .build-card-row {
+  border-top: 1px solid rgba(255,255,255,0.02);
+}
+
+.build-card-icons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.build-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.build-card-sep {
+  height: 1px;
+  background: var(--border);
+  margin: 0.3rem 0;
+  opacity: 0.5;
+}
+
+.skill-max-order-compact {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.skill-ab-compact {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.situational-compact {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.sit-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.sit-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.sit-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Lane filter */
+.lane-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.lane-filter-label {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Match detail panel (expandido ao clicar) */
+.match-detail-panel {
+  margin-top: 0.75rem;
+  background: var(--panel);
+  border: 1px solid var(--accent-dim);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+}
+
+.match-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.match-detail-header h4 {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.match-detail-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px 6px;
+}
+
+.match-detail-meta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 0.78rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.match-teams-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.match-team {
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+}
+
+.match-team-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0;
+  font-size: 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.match-detail-build {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.match-detail-build > div {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 768px) {
+  .build-compact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .match-teams-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .situational-compact {
+    flex-direction: column;
+  }
+}
+
 /* Lista de checkboxes */
 .region-dropdown-list {
   padding: 0.3rem 0;

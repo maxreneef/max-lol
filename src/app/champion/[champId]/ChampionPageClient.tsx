@@ -35,7 +35,8 @@ const TIER_COLOR: Record<string, string> = {
   "S+": "#0ac8b9", S: "#0ac8b9", A: "#1a9e6e", B: "#c8aa6e", C: "#e06c3b", D: "#e84057",
 };
 
-const TABS = ["Build", "Counters", "Partidas", "One Tricks", "Pro Builds", "Guia"] as const;
+const TABS = ["Build", "Counters", "One Tricks", "Pro Builds", "Guia"] as const;
+const LANES = ["Todas", "Top", "Jungle", "Mid", "ADC", "Suporte"] as const;
 type Tab = typeof TABS[number];
 
 const ABILITY_COLORS: Record<string, string> = { Q: "#0ac8b9", W: "#c8aa6e", E: "#9faafc", R: "#e84057" };
@@ -191,152 +192,326 @@ function ItemSetList({ sets, showArrows, compact }: { sets: ItemSet[]; showArrow
 
 // ── Build Tab (inclui Runas, Habilidades, Itens) ────────────────────────────────
 
+// ── Lane Filter ──────────────────────────────────────────────────────────────────
+
+function LaneFilter({ lane, onChange }: { lane: string; onChange: (l: string) => void }) {
+  return (
+    <div className="lane-filter">
+      <span className="lane-filter-label">Rota:</span>
+      <div className="tl-pills">
+        {LANES.map((l) => (
+          <button
+            key={l}
+            className={`tl-pill ${lane === l ? "active" : ""}`}
+            onClick={() => onChange(l)}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Build Tab (compacto, estilo onetricks.gg) ────────────────────────────────────
+
 function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string }) {
-  const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems } = buildData;
+  const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory } = buildData;
+  const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
+
+  const wins = (matchHistory ?? []).filter((m) => m.win).length;
+  const total = (matchHistory ?? []).length;
 
   return (
     <div className="tab-content">
-      {/* Summoner Spells */}
-      <section className="build-section">
-        <h3 className="build-section-title">Feitiços de Invocador</h3>
-        <div className="spell-rows">
-          {summonerSpells.map((set, i) => (
-            <div key={i} className="spell-row">
-              <div className="spell-icons">{set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={40} />)}</div>
-              <div className="spell-names">{set.spells.join(" + ")}</div>
-              <div className="spell-meta">
-                <span className="pick-rate-badge">{set.pickRate}%</span>
-                <WRBadge wr={set.winRate} />
-                <span className="muted-sm">{set.sampleSize.toLocaleString()} partidas</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* ── Grid compacto 2 colunas ── */}
+      <div className="build-compact-grid">
 
-      {/* Runas (resumo) */}
-      <section className="build-section">
-        <h3 className="build-section-title">Runas</h3>
-        {buildData.runeSetups.slice(0, 2).map((setup, i) => (
-          <RuneSetupCard key={i} setup={setup} index={i} totalGames={buildData.totalGames} compact />
-        ))}
-      </section>
-
-      {/* Skill Order */}
-      <section className="build-section">
-        <h3 className="build-section-title">Ordem de Habilidades</h3>
-        {skillOrders.map((so, idx) => (
-          <div key={idx} className="skill-order-block">
-            <div className="skill-order-summary">
-              <div className="skill-max-order">
-                {(["Q", "W", "E", "R"] as const).filter((ab) => {
-                  if (ab === so.maxFirst) return true;
-                  return false;
-                }).map((ab) => (
-                  <span key={ab} className="skill-ab" style={{ background: ABILITY_COLORS[ab] + "22", color: ABILITY_COLORS[ab], border: `1px solid ${ABILITY_COLORS[ab]}55` }}>
-                    Max {ab}
-                  </span>
-                ))}
-              </div>
-              <div className="skill-order-meta">
-                <span className="pick-rate-badge">{so.pickRate}%</span>
-                <WRBadge wr={so.winRate} />
-                <span className="muted-sm">{so.sampleSize.toLocaleString()} partidas</span>
-              </div>
-            </div>
-          </div>
-        ))}
-      </section>
-
-      {/* Starting Items */}
-      <section className="build-section"><h3 className="build-section-title">Itens Iniciais</h3><ItemSetList sets={startingItems} /></section>
-
-      {/* Boots */}
-      <section className="build-section"><h3 className="build-section-title">Botas</h3><ItemSetList sets={boots} /></section>
-
-      {/* Core Builds */}
-      <section className="build-section"><h3 className="build-section-title">Build Principal</h3><ItemSetList sets={coreBuilds} showArrows /></section>
-
-      {/* Situational */}
-      <div className="situational-grid">
-        <section className="build-section"><h3 className="build-section-title">4° Item</h3><ItemSetList sets={fourthItems} compact /></section>
-        <section className="build-section"><h3 className="build-section-title">5° Item</h3><ItemSetList sets={fifthItems} compact /></section>
-        <section className="build-section"><h3 className="build-section-title">6° Item</h3><ItemSetList sets={sixthItems} compact /></section>
-      </div>
-
-      {/* Habilidades (resumo compacto) */}
-      {detail && (
-        <section className="build-section">
-          <h3 className="build-section-title">Habilidades</h3>
-          <div className="abilities-list">
-            {[
-              { key: "P", name: detail.passive.name, desc: detail.passive.description.replace(/<[^>]+>/g, "").slice(0, 120), img: `${ddBase}/img/passive/${detail.passive.image.full}` },
-              ...detail.spells.map((sp, i) => ({
-                key: ["Q", "W", "E", "R"][i],
-                name: sp.name,
-                desc: sp.description.replace(/<[^>]+>/g, "").slice(0, 120),
-                img: `${ddBase}/img/spell/${sp.image.full}`,
-              })),
-            ].map((ab) => (
-              <div key={ab.key} className="ability-card">
-                <div className="ability-header">
-                  <img src={ab.img} alt={ab.name} width={40} height={40} className="ability-icon" />
-                  <div>
-                    <div className="ability-key">{ab.key}</div>
-                    <div className="ability-name">{ab.name}</div>
-                  </div>
+        {/* Coluna Esquerda */}
+        <div className="build-col">
+          {/* Feitiços */}
+          <div className="build-card">
+            <h4 className="build-card-title">Feitiços</h4>
+            {summonerSpells.slice(0, 2).map((set, i) => (
+              <div key={i} className="build-card-row">
+                <div className="build-card-icons">
+                  {set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={28} />)}
                 </div>
-                <p className="ability-desc">{ab.desc}…</p>
+                <div className="build-card-meta">
+                  <span className="pick-rate-badge">{set.pickRate}%</span>
+                  <WRBadge wr={set.winRate} />
+                </div>
               </div>
             ))}
           </div>
+
+          {/* Ordem de Skills */}
+          <div className="build-card">
+            <h4 className="build-card-title">Ordem de Skills</h4>
+            {skillOrders.slice(0, 2).map((so, idx) => (
+              <div key={idx} className="build-card-row">
+                <div className="skill-max-order-compact">
+                  {(["Q","W","E","R"] as const).filter((ab) => so.maxFirst === ab || (so.maxFirst !== ab && false)).length > 0 ? (
+                    <span className="skill-ab-compact" style={{background: ABILITY_COLORS[so.maxFirst] + "22", color: ABILITY_COLORS[so.maxFirst], border: `1px solid ${ABILITY_COLORS[so.maxFirst]}55`}}>
+                      Max {so.maxFirst}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="build-card-meta">
+                  <span className="pick-rate-badge">{so.pickRate}%</span>
+                  <WRBadge wr={so.winRate} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Itens Iniciais + Botas */}
+          <div className="build-card">
+            <h4 className="build-card-title">Início + Botas</h4>
+            {startingItems.slice(0, 2).map((set, i) => (
+              <div key={"start"+i} className="build-card-row">
+                <div className="build-card-icons" style={{gap:1}}>
+                  {set.items.map((id) => <ItemIcon key={id} id={id} size={26} />)}
+                </div>
+                <div className="build-card-meta">
+                  <span className="pick-rate-badge">{set.pickRate}%</span>
+                  <WRBadge wr={set.winRate} />
+                </div>
+              </div>
+            ))}
+            <div className="build-card-sep" />
+            {boots.slice(0, 2).map((set, i) => (
+              <div key={"boot"+i} className="build-card-row">
+                <div className="build-card-icons" style={{gap:1}}>
+                  {set.items.map((id) => <ItemIcon key={id} id={id} size={26} />)}
+                </div>
+                <div className="build-card-meta">
+                  <span className="pick-rate-badge">{set.pickRate}%</span>
+                  <WRBadge wr={set.winRate} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Coluna Direita */}
+        <div className="build-col">
+          {/* Runas */}
+          <div className="build-card">
+            <h4 className="build-card-title">Runas</h4>
+            {buildData.runeSetups.slice(0, 2).map((setup, i) => (
+              <CompactRuneCard key={i} setup={setup} i={i} />
+            ))}
+          </div>
+
+          {/* Build Principal */}
+          <div className="build-card">
+            <h4 className="build-card-title">Build Principal</h4>
+            {coreBuilds.slice(0, 3).map((set, i) => (
+              <div key={i} className="build-card-row">
+                <div className="build-card-icons" style={{gap:1}}>
+                  {set.items.map((id, j) => (
+                    <span key={j}>
+                      {j > 0 && <span style={{color:"var(--muted)",margin:"0 1px"}}>›</span>}
+                      <ItemIcon id={id} size={26} />
+                    </span>
+                  ))}
+                </div>
+                <div className="build-card-meta">
+                  <span className="pick-rate-badge">{set.pickRate}%</span>
+                  <WRBadge wr={set.winRate} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Itens Situacionais */}
+          <div className="build-card">
+            <h4 className="build-card-title">Itens 4°–6°</h4>
+            <div className="situational-compact">
+              {[{label:"4°",items:fourthItems},{label:"5°",items:fifthItems},{label:"6°",items:sixthItems}].map((group) => (
+                <div key={group.label} className="sit-group">
+                  <span className="sit-label">{group.label}</span>
+                  <div className="sit-items">
+                    {group.items.slice(0, 2).map((set, i) => (
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:2}}>
+                        {set.items.slice(0, 2).map((id) => <ItemIcon key={id} id={id} size={22} />)}
+                        <span style={{fontSize:"0.6rem",color:"var(--muted)",marginLeft:2}}>{set.pickRate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Partidas Recentes (fim da Build) ── */}
+      {matchHistory && matchHistory.length > 0 && (
+        <section className="build-section" style={{marginTop:"1.5rem"}}>
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.75rem"}}>
+            <h3 className="build-section-title" style={{margin:0}}>
+              Partidas Recentes — Monochampions
+            </h3>
+            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
+              {wins}V / {total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas analisadas
+            </span>
+          </div>
+          <p className="muted-sm" style={{marginBottom:"0.75rem"}}>
+            ⚡ Fonte de todas as estatísticas. Dados de jogadores com 700k+ de maestria, Diamante+.
+          </p>
+
+          <div className="matches-table-wrap">
+            <table className="matches-table">
+              <thead>
+                <tr>
+                  <th>Jogador</th>
+                  <th>Elo</th>
+                  <th>Reg</th>
+                  <th>Res</th>
+                  <th>KDA</th>
+                  <th>Itens</th>
+                  <th>Runas</th>
+                  <th>Skills</th>
+                  <th>Dur</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matchHistory.slice(0, 20).map((m, i) => {
+                  const FLG: Record<string, string> = { br1: "🇧🇷", kr: "🇰🇷", euw1: "🇪🇺", na1: "🇺🇸", oc1: "🇦🇺" };
+                  return (
+                    <tr key={i} className={m.win ? "match-row-win" : "match-row-loss"} style={{cursor:"pointer"}} onClick={() => setExpandedMatch(expandedMatch === i ? null : i)}>
+                      <td>
+                        <span className="match-player-name">{m.summonerName}</span>
+                        <span className="match-player-tag" style={{marginLeft:4}}>#{m.tagLine}</span>
+                      </td>
+                      <td><span className="match-tier">{m.tier}</span></td>
+                      <td>{FLG[m.platform] ?? "🌐"}</td>
+                      <td><span className={`match-result ${m.win?"win":"loss"}`}>{m.win?"V":"D"}</span></td>
+                      <td><span className="match-kda">{m.kda}</span></td>
+                      <td>
+                        <div className="match-items-row">{m.items.map((item,j)=><ItemIcon key={j} id={item} size={20} />)}</div>
+                      </td>
+                      <td>
+                        <div className="match-runes-info">
+                          <span className="match-keystone">{m.runes.keystone}</span>
+                          <span className="match-trees">{m.runes.primary}/{m.runes.secondary}</span>
+                        </div>
+                      </td>
+                      <td><span className="match-skill-order">{m.skillOrder}</span></td>
+                      <td className="muted-sm">{m.gameDuration}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Detalhe da partida expandida */}
+          {expandedMatch !== null && (
+            <MatchDetail match={matchHistory[expandedMatch]} champId={buildData.champId} onClose={() => setExpandedMatch(null)} />
+          )}
         </section>
       )}
     </div>
   );
 }
 
-function RuneSetupCard({ setup, index, totalGames, compact: _compact }: { setup: RuneSetup; index: number; totalGames: number; compact?: boolean }) {
-  const allSlots = [setup.keystone, setup.slot1, setup.slot2, setup.slot3];
-  const secSlots = [setup.secondary1, setup.secondary2];
+// ── Match Detail Panel (expandido ao clicar numa partida) ──────────────────────
+
+function MatchDetail({ match, champId, onClose }: { match: MatchEntry; champId: string; onClose: () => void }) {
+  // Gera time aliado e inimigo mockados
+  const allyTeam: { name: string; champId: string }[] = [
+    { name: match.summonerName, champId },
+    { name: "JungleAliado", champId: ["Lee Sin","Viego","Sejuani","Jarvan IV","Xin Zhao"][Math.floor(Math.random()*5)] },
+    { name: "MidAliado", champId: ["Ahri","Syndra","Orianna","Viktor","Yasuo"][Math.floor(Math.random()*5)] },
+    { name: "ADCAliado", champId: ["Jinx","Caitlyn","Jhin","Ezreal","Kai'Sa"][Math.floor(Math.random()*5)] },
+    { name: "SupAliado", champId: ["Nautilus","Thresh","Lulu","Braum","Rell"][Math.floor(Math.random()*5)] },
+  ];
+  const enemyTeam: { name: string; champId: string }[] = [
+    { name: "TopInimigo", champId: ["Darius","K'Sante","Renekton","Garen","Aatrox"][Math.floor(Math.random()*5)] },
+    { name: "JgInimigo", champId: ["Graves","Kindred","Elise","Kha'Zix","Wukong"][Math.floor(Math.random()*5)] },
+    { name: "MidInimigo", champId: ["Zed","Akali","LeBlanc","Fizz","Katarina"][Math.floor(Math.random()*5)] },
+    { name: "ADCInimigo", champId: ["Vayne","Draven","Samira","Lucian","Ashe"][Math.floor(Math.random()*5)] },
+    { name: "SupInimigo", champId: ["Leona","Blitzcrank","Pyke","Morgana","Zyra"][Math.floor(Math.random()*5)] },
+  ];
+
   return (
-    <div className="rune-setup-card" style={{ marginBottom: "0.75rem" }}>
-      <div className="rune-setup-header">
-        <h4 style={{ color: setup.primaryTreeColor, margin: 0, fontSize: "0.9rem" }}>
-          {index === 0 ? "Principal" : "Alternativa"}: {setup.primaryTree} / {setup.secondaryTree}
-        </h4>
-        <div className="rune-setup-meta">
+    <div className="match-detail-panel">
+      <div className="match-detail-header">
+        <h4>Detalhes da Partida</h4>
+        <button onClick={onClose} className="match-detail-close">✕</button>
+      </div>
+
+      <div className="match-detail-meta">
+        <span>{match.summonerName}#{match.tagLine}</span>
+        <span className="muted-sm">{match.tier} {match.rank}</span>
+        <span className={match.win ? "match-result win" : "match-result loss"}>{match.win ? "Vitória" : "Derrota"}</span>
+        <span className="muted-sm">{match.gameDuration} · KDA {match.kda}</span>
+      </div>
+
+      <div className="match-teams-grid">
+        {/* Time Aliado */}
+        <div className="match-team">
+          <h5 style={{color:"#1a9e6e",margin:"0 0 0.5rem"}}>Aliados 🟢</h5>
+          {allyTeam.map((p, i) => (
+            <div key={i} className="match-team-row">
+              <ChampIcon champId={p.champId} size={26} />
+              <span>{p.name}</span>
+              <span style={{marginLeft:"auto",fontSize:"0.65rem",color:"var(--muted)"}}>{p.champId}</span>
+            </div>
+          ))}
+        </div>
+        {/* Time Inimigo */}
+        <div className="match-team">
+          <h5 style={{color:"#e84057",margin:"0 0 0.5rem"}}>Inimigos 🔴</h5>
+          {enemyTeam.map((p, i) => (
+            <div key={i} className="match-team-row">
+              <ChampIcon champId={p.champId} size={26} />
+              <span>{p.name}</span>
+              <span style={{marginLeft:"auto",fontSize:"0.65rem",color:"var(--muted)"}}>{p.champId}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Itens e build do jogador foco */}
+      <div className="match-detail-build">
+        <div><strong>Itens:</strong> <div className="match-items-row">{match.items.map((id,j)=><ItemIcon key={j} id={id} size={28} />)}</div></div>
+        <div><strong>Runas:</strong> {match.runes.keystone} ({match.runes.primary}/{match.runes.secondary})</div>
+        <div><strong>Feitiços:</strong> {match.summonerSpells.join(" + ")}</div>
+        <div><strong>Ordem:</strong> {match.skillOrder}</div>
+      </div>
+    </div>
+  );
+}
+
+// ── Compact Rune Card ───────────────────────────────────────────────────────────
+
+function CompactRuneCard({ setup, i }: { setup: RuneSetup; i: number }) {
+  return (
+    <div className="build-card-row" style={{flexDirection:"column",alignItems:"flex-start",gap:"0.2rem"}}>
+      <div style={{display:"flex",alignItems:"center",gap:"0.35rem",width:"100%"}}>
+        <div style={{display:"flex",gap:2}}>
+          {[setup.keystone, setup.slot1, setup.slot2, setup.slot3].map((r,si) => (
+            <RuneIcon key={si} path={r.icon} size={si===0?24:18} />
+          ))}
+        </div>
+        <span style={{color:"var(--muted)",fontSize:"0.6rem"}}>|</span>
+        <div style={{display:"flex",gap:2}}>
+          {[setup.secondary1, setup.secondary2].map((r,si) => (
+            <RuneIcon key={si} path={r.icon} size={18} />
+          ))}
+        </div>
+        <div style={{marginLeft:"auto",display:"flex",gap:"0.5rem",alignItems:"center"}}>
           <span className="pick-rate-badge">{setup.pickRate}%</span>
           <WRBadge wr={setup.winRate} />
-          <span className="muted-sm">{setup.sampleSize.toLocaleString()} partidas</span>
         </div>
       </div>
-      <div className="rune-trees">
-        <div className="rune-tree">
-          <div className="rune-tree-title" style={{ color: setup.primaryTreeColor }}>Primária — {setup.primaryTree}</div>
-          {allSlots.map((rune, si) => (
-            <div key={si} className={`rune-slot-row ${si === 0 ? "keystone-row" : ""}`}>
-              <RuneIcon path={rune.icon} size={si === 0 ? 40 : 28} />
-              <div className="rune-slot-info">
-                <div className="rune-name">{rune.name}</div>
-                <div className="rune-stats"><span className="pick-rate-badge">{rune.pickRate}%</span><WRBadge wr={rune.winRate} /></div>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="rune-tree">
-          <div className="rune-tree-title">Secundária — {setup.secondaryTree}</div>
-          {secSlots.map((rune, si) => (
-            <div key={si} className="rune-slot-row">
-              <RuneIcon path={rune.icon} size={28} />
-              <div className="rune-slot-info">
-                <div className="rune-name">{rune.name}</div>
-                <div className="rune-stats"><span className="pick-rate-badge">{rune.pickRate}%</span><WRBadge wr={rune.winRate} /></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <span style={{fontSize:"0.62rem",color:"var(--muted)"}}>
+        {setup.primaryTree} / {setup.secondaryTree}
+      </span>
     </div>
   );
 }
@@ -446,118 +621,6 @@ function MatchupList({ matchups, champName, onSelect, activeId }: { matchups: Ma
           <span className="muted-sm">{m.games.toLocaleString()}</span>
         </button>
       ))}
-    </div>
-  );
-}
-
-// ── Matches Tab (partidas recentes dos monochampions) ──────────────────────────
-
-function MatchesTab({ buildData }: { buildData: ChampionBuildData }) {
-  if (!buildData.matchHistory || buildData.matchHistory.length === 0) {
-    return (
-      <div className="tab-content">
-        <p className="muted-sm" style={{ padding: "2rem", textAlign: "center" }}>Nenhuma partida encontrada.</p>
-      </div>
-    );
-  }
-
-  const wins = buildData.matchHistory.filter((m) => m.win).length;
-  const total = buildData.matchHistory.length;
-
-  return (
-    <div className="tab-content">
-      {/* Resumo */}
-      <section className="build-section">
-        <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
-          <div>
-            <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>Partidas analisadas</span>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{total}</div>
-          </div>
-          <div>
-            <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>Win Rate</span>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: wrColor((wins / total) * 100) }}>
-              {((wins / total) * 100).toFixed(1)}%
-            </div>
-          </div>
-          <div>
-            <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>Vitórias / Derrotas</span>
-            <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>
-              <span style={{ color: "#1a9e6e" }}>{wins}V</span>{" "}
-              <span style={{ color: "#e84057" }}>{total - wins}D</span>
-            </div>
-          </div>
-        </div>
-        <p className="muted-sm">
-          ⚡ Estas partidas são a fonte de todas as estatísticas de build, runas e win rate exibidas nas outras abas.
-          Dados coletados exclusivamente de jogadores monochampions (50+ partidas com este campeão).
-        </p>
-      </section>
-
-      {/* Tabela de partidas */}
-      <section className="build-section">
-        <h3 className="build-section-title">Partidas Recentes — Monochampions</h3>
-        <div className="matches-table-wrap">
-          <table className="matches-table">
-            <thead>
-              <tr>
-                <th>Jogador</th>
-                <th>Elo</th>
-                <th>Região</th>
-                <th>Resultado</th>
-                <th>KDA</th>
-                <th>Itens</th>
-                <th>Runas</th>
-                <th>Ordem</th>
-                <th>Duração</th>
-              </tr>
-            </thead>
-            <tbody>
-              {buildData.matchHistory.map((m, i) => {
-                const REGION_FLAG: Record<string, string> = { br1: "🇧🇷", kr: "🇰🇷", euw1: "🇪🇺", na1: "🇺🇸", oc1: "🇦🇺", };
-                return (
-                  <tr key={i} className={m.win ? "match-row-win" : "match-row-loss"}>
-                    <td>
-                      <div className="match-player-name">{m.summonerName}</div>
-                      <div className="match-player-tag">#{m.tagLine}</div>
-                    </td>
-                    <td>
-                      <span className="match-tier">{m.tier} {m.rank}</span>
-                    </td>
-                    <td>
-                      {REGION_FLAG[m.platform] ?? "🌐"} {m.region.slice(0, 12)}
-                    </td>
-                    <td>
-                      <span className={`match-result ${m.win ? "win" : "loss"}`}>
-                        {m.win ? "Vitória" : "Derrota"}
-                      </span>
-                    </td>
-                    <td>
-                      <span className="match-kda">{m.kda}</span>
-                    </td>
-                    <td>
-                      <div className="match-items-row">
-                        {m.items.map((item, j) => (
-                          <ItemIcon key={j} id={item} size={22} />
-                        ))}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="match-runes-info">
-                        <span className="match-keystone">{m.runes.keystone}</span>
-                        <span className="match-trees">{m.runes.primary}/{m.runes.secondary}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="match-skill-order">{m.skillOrder}</span>
-                    </td>
-                    <td className="muted-sm">{m.gameDuration}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
     </div>
   );
 }
@@ -747,14 +810,29 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
     router.replace(`?${params.toString()}`, { scroll: false });
   }
 
+  // Lane filter state (lido da URL ou default "Todas")
+  const urlLane = searchParams.get("lane") ?? "Todas";
+  const [lane, setLane] = useState(urlLane);
+
+  function handleLaneChange(l: string) {
+    setLane(l);
+    const params = new URLSearchParams(searchParams.toString());
+    if (l === "Todas") { params.delete("lane"); }
+    else { params.set("lane", l); }
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }
+
+  // Filtra buildData baseado na lane (mock: só afeta visualmente)
+  const laneLabel = lane === "Todas" ? buildData.primaryRole : lane;
+
   return (
     <div className="champ-page">
       <ChampionHeader champ={champ} detail={detail} buildData={buildData} ddBase={ddBase} splashUrl={splashUrl} />
 
-      {/* Data source toggle + Region filter */}
       <div className="champ-page-inner">
         <DataSourceToggle label="Fonte dos dados" />
         <RegionFilter showLabel />
+        <LaneFilter lane={lane} onChange={handleLaneChange} />
 
         <AIAnalysis champId={champ.id} />
 
@@ -777,7 +855,6 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
         <div className="champ-tab-content">
           {normalizedTab === "Build" && <BuildTab buildData={buildData} detail={detail} ddBase={ddBase} />}
           {normalizedTab === "Counters" && <CountersTab buildData={buildData} champName={champ.name} />}
-          {normalizedTab === "Partidas" && <MatchesTab buildData={buildData} />}
           {normalizedTab === "One Tricks" && <OneTricksTab buildData={buildData} />}
           {normalizedTab === "Pro Builds" && <ProBuildsTab champName={champ.name} />}
           {normalizedTab === "Guia" && <GuiaTab champName={champ.name} />}
