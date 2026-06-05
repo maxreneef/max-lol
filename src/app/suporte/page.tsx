@@ -8,58 +8,74 @@ export const metadata: Metadata = {
 };
 
 const KOFI = process.env.NEXT_PUBLIC_KOFI_USERNAME ?? "maxreneef";
-const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG ?? "maxlol-20";
+const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG ?? "maxlol-20"; // ID real aprovado
 
 /* Produtos afiliados — substitua os ASINs/URLs pelos seus links reais após
    entrar no programa Amazon Associates Brasil (associados.amazon.com.br) */
 const PRODUCTS = [
   {
     name: "Mouse Logitech G Pro X Superlight 2",
-    desc: "O mouse preferido dos pros do cenário competitivo. Ultra-leve e sem fio.",
-    price: "R$ 699",
+    desc: "O mouse preferido dos pros do cenário competitivo. Ultra-leve (60g) e sem fio.",
+    price: "a partir de R$ 599",
     img: "https://m.media-amazon.com/images/I/51LBEGCg5ZL._AC_SL500_.jpg",
-    url: `https://www.amazon.com.br/s?k=logitech+g+pro+x+superlight&tag=${AMAZON_TAG}`,
+    url: `https://www.amazon.com.br/s?k=logitech+g+pro+x+superlight+2&tag=${AMAZON_TAG}`,
     category: "Mouse",
   },
   {
     name: "Headset HyperX Cloud II",
-    desc: "Áudio de qualidade para ouvir os passos inimigos com precisão.",
-    price: "R$ 399",
+    desc: "Áudio 7.1 virtual para ouvir os passos inimigos com precisão milimétrica.",
+    price: "a partir de R$ 349",
     img: "https://m.media-amazon.com/images/I/71FRQrUCKHL._AC_SL500_.jpg",
-    url: `https://www.amazon.com.br/s?k=hyperx+cloud+ii&tag=${AMAZON_TAG}`,
+    url: `https://www.amazon.com.br/s?k=hyperx+cloud+ii+headset&tag=${AMAZON_TAG}`,
     category: "Headset",
   },
   {
     name: "Teclado Mecânico Redragon K552",
-    desc: "Mecânico com switches vermelho. Cliques precisos, resposta rápida.",
-    price: "R$ 199",
+    desc: "Switches mecânicos, RGB e build compacto. Custo-benefício imbatível.",
+    price: "a partir de R$ 179",
     img: "https://m.media-amazon.com/images/I/71e5GDhXroL._AC_SL500_.jpg",
-    url: `https://www.amazon.com.br/s?k=redragon+k552&tag=${AMAZON_TAG}`,
+    url: `https://www.amazon.com.br/s?k=redragon+k552+teclado+mecanico&tag=${AMAZON_TAG}`,
     category: "Teclado",
   },
   {
-    name: "Monitor 24\" 144Hz IPS",
-    desc: "144Hz é o mínimo para jogar LoL de forma competitiva. Diferença visível.",
-    price: "R$ 899",
+    name: "Monitor Gamer 24\" 144Hz",
+    desc: "144Hz é o mínimo para jogar LoL competitivo. A diferença é imediata e visível.",
+    price: "a partir de R$ 799",
     img: "https://m.media-amazon.com/images/I/81wAiFyQ8cL._AC_SL500_.jpg",
-    url: `https://www.amazon.com.br/s?k=monitor+144hz+24+polegadas+gamer&tag=${AMAZON_TAG}`,
+    url: `https://www.amazon.com.br/s?k=monitor+gamer+144hz+24+polegadas&tag=${AMAZON_TAG}`,
     category: "Monitor",
   },
   {
-    name: "Mousepad XL Gamer",
-    desc: "Base grande para movimentos amplos. Superfície otimizada para gaming.",
-    price: "R$ 89",
+    name: "Mousepad Gamer XL (80×30cm)",
+    desc: "Superfície otimizada para DPI baixo. Cobertura total da mesa.",
+    price: "a partir de R$ 59",
     img: "https://m.media-amazon.com/images/I/71vx38j6OxL._AC_SL500_.jpg",
-    url: `https://www.amazon.com.br/s?k=mousepad+xl+gamer&tag=${AMAZON_TAG}`,
+    url: `https://www.amazon.com.br/s?k=mousepad+gamer+xl+80x30&tag=${AMAZON_TAG}`,
     category: "Mousepad",
   },
   {
     name: "Cadeira Gamer ThunderX3",
     desc: "Ergonomia para longas sessões de ranked sem dor nas costas.",
-    price: "R$ 799",
+    price: "a partir de R$ 699",
     img: "https://m.media-amazon.com/images/I/71rj3J3RXZL._AC_SL500_.jpg",
-    url: `https://www.amazon.com.br/s?k=cadeira+gamer+thunderx3&tag=${AMAZON_TAG}`,
+    url: `https://www.amazon.com.br/s?k=cadeira+gamer+thunderx3+tc3&tag=${AMAZON_TAG}`,
     category: "Cadeira",
+  },
+  {
+    name: "Webcam Logitech C920",
+    desc: "Full HD 1080p para streams e facecam. Padrão da indústria de conteúdo.",
+    price: "a partir de R$ 399",
+    img: "https://m.media-amazon.com/images/I/71bu0wEMLGL._AC_SL500_.jpg",
+    url: `https://www.amazon.com.br/s?k=logitech+c920+webcam&tag=${AMAZON_TAG}`,
+    category: "Webcam",
+  },
+  {
+    name: "Nobreak APC 600VA",
+    desc: "Evita desconexão em quedas de energia durante a ranked. Item obrigatório no BR.",
+    price: "a partir de R$ 299",
+    img: "https://m.media-amazon.com/images/I/61QCi3JXJPL._AC_SL500_.jpg",
+    url: `https://www.amazon.com.br/s?k=nobreak+apc+600va&tag=${AMAZON_TAG}`,
+    category: "Nobreak",
   },
 ];
 
