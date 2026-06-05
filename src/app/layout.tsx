@@ -44,14 +44,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR">
-      <body>
-        {/* Google AdSense Auto Ads — coloca anúncios automaticamente */}
+      <head>
+        {/* Google AdSense — deve ficar no <head> para verificação e Auto Ads */}
         <Script
           async
           src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUB}`}
           crossOrigin="anonymous"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
+      </head>
+      <body>
 
         <header className="site-header">
           <div className="inner">
