@@ -34,7 +34,8 @@ export const metadata: Metadata = {
   },
 };
 
-const PUB_ID = process.env.NEXT_PUBLIC_ADSENSE_PUB_ID;
+// Publisher ID fixo — conta aprovada
+const ADSENSE_PUB = "ca-pub-5488213461319588";
 
 export default function RootLayout({
   children,
@@ -44,15 +45,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body>
-        {/* Google AdSense — ativa automaticamente após aprovação */}
-        {PUB_ID && (
-          <Script
-            async
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${PUB_ID}`}
-            crossOrigin="anonymous"
-            strategy="lazyOnload"
-          />
-        )}
+        {/* Google AdSense Auto Ads — coloca anúncios automaticamente */}
+        <Script
+          async
+          src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_PUB}`}
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
 
         <header className="site-header">
           <div className="inner">
