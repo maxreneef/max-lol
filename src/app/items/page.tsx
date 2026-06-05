@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { ItemsClient, type ItemData } from "./ItemsClient";
+import { PageWithAds } from "@/components/PageWithAds";
+import { AdBanner } from "@/components/AdUnit";
 
 export const metadata: Metadata = {
   title: "Itens — Max LoL",
@@ -31,13 +33,16 @@ export default async function ItemsPage() {
     .sort((a, b) => b.gold.total - a.gold.total);
 
   return (
-    <main className="container">
-      <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Itens</h1>
-      <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
-        {list.length} itens compráveis — Patch 15.11.
-        Ordene por <strong>eficiência de ouro</strong> para ver custo-benefício por stats.
-      </p>
-      <ItemsClient items={list} itemMap={itemMap} />
-    </main>
+    <PageWithAds>
+      <main className="container">
+        <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Itens</h1>
+        <p style={{ color: "var(--muted)", marginBottom: "1rem" }}>
+          {list.length} itens compráveis — Patch 15.11.
+          Ordene por <strong>eficiência de ouro</strong> para ver custo-benefício por stats.
+        </p>
+        <AdBanner />
+        <ItemsClient items={list} itemMap={itemMap} />
+      </main>
+    </PageWithAds>
   );
 }

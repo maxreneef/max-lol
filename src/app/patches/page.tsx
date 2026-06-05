@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { PageWithAds } from "@/components/PageWithAds";
+import { AdRect } from "@/components/AdUnit";
 
 export const metadata: Metadata = {
   title: "Patch Notes — Max LoL",
@@ -30,6 +32,7 @@ export default async function PatchesPage() {
   const current = versions[0];
 
   return (
+    <PageWithAds>
     <main className="container">
       <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Patch Notes</h1>
       <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
@@ -52,6 +55,8 @@ export default async function PatchesPage() {
           </p>
         </div>
       </a>
+
+      <AdRect />
 
       {/* Lista de patches anteriores */}
       <h2 style={{ fontSize: "1.1rem", margin: "2rem 0 1rem", color: "var(--muted)" }}>Patches anteriores</h2>
@@ -81,5 +86,6 @@ export default async function PatchesPage() {
         Links direcionam para as notas oficiais no site da Riot Games.
       </p>
     </main>
+    </PageWithAds>
   );
 }

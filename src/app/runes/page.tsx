@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { PageWithAds } from "@/components/PageWithAds";
+import { AdRect } from "@/components/AdUnit";
 
 interface RuneSlot { runes: Rune[] }
 interface Rune { id: number; key: string; icon: string; name: string; shortDesc: string; longDesc: string }
@@ -25,6 +27,7 @@ export default function RunesPage() {
   }, []);
 
   return (
+    <PageWithAds>
     <main className="container">
       <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Runas</h1>
       <p style={{ color: "var(--muted)", marginBottom: "2rem" }}>
@@ -38,8 +41,10 @@ export default function RunesPage() {
       )}
 
       <div className="rune-trees">
-        {trees.map((tree) => (
-          <div key={tree.id} className="rune-tree-card" style={{ "--tree-color": TREE_COLORS[tree.key] ?? "#fff" } as React.CSSProperties}>
+        {trees.map((tree, idx) => (
+          <div key={tree.id}>
+          {idx === 2 && <AdRect />}
+          <div className="rune-tree-card" style={{ "--tree-color": TREE_COLORS[tree.key] ?? "#fff" } as React.CSSProperties}>
             <div className="rune-tree-header">
               <img src={`https://ddragon.leagueoflegends.com/cdn/img/${tree.icon}`} alt={tree.name} width={36} height={36} className="rune-tree-icon"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -71,8 +76,10 @@ export default function RunesPage() {
               </div>
             ))}
           </div>
+          </div>
         ))}
       </div>
     </main>
+    </PageWithAds>
   );
 }

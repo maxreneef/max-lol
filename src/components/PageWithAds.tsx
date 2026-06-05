@@ -15,7 +15,7 @@ export function PageWithAds({ children }: Props) {
       <aside className="page-ads-left">
         <AdSidebarLeft />
       </aside>
-      <main className="page-ads-main">{children}</main>
+      <div className="page-ads-main">{children}</div>
       <aside className="page-ads-right">
         <AdSidebarRight />
       </aside>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { PageWithAds } from "@/components/PageWithAds";
+import { AdBanner } from "@/components/AdUnit";
 
 const DD = "https://ddragon.leagueoflegends.com/cdn/15.11.1";
 
@@ -93,11 +95,14 @@ export default function SpellsPage() {
   }, [search, champions]);
 
   return (
+    <PageWithAds>
     <main className="container">
       <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Buscar por Habilidade</h1>
-      <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
+      <p style={{ color: "var(--muted)", marginBottom: "1rem" }}>
         Encontre campeões pelo nome ou efeito de uma habilidade.
       </p>
+
+      <AdBanner />
 
       <input
         type="text"
@@ -155,5 +160,6 @@ export default function SpellsPage() {
         </div>
       )}
     </main>
+    </PageWithAds>
   );
 }

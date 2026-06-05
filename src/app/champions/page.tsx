@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { fetchChampions, mockTierStats, primaryRole, championIcon } from "@/lib/ddragon";
 import { ChampionsGrid } from "./ChampionsGrid";
+import { PageWithAds } from "@/components/PageWithAds";
 
 export const metadata: Metadata = {
   title: "Campeões — Max LoL",
@@ -22,5 +23,5 @@ export default async function ChampionsPage() {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  return <ChampionsGrid entries={entries} />;
+  return <PageWithAds><ChampionsGrid entries={entries} /></PageWithAds>;
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { HomeSearch } from "./HomeSearch";
+import { PageWithAds } from "@/components/PageWithAds";
+import { AdRect } from "@/components/AdUnit";
 
 export const metadata: Metadata = {
   title: "Max LoL — Estatísticas de League of Legends",
@@ -8,6 +10,7 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
+    <PageWithAds>
     <main>
       {/* Hero */}
       <section className="home-hero">
@@ -28,6 +31,8 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <AdRect />
 
       {/* Features grid */}
       <section className="home-features container">
@@ -82,6 +87,7 @@ export default function Home() {
         Games, Inc.
       </p>
     </main>
+    </PageWithAds>
   );
 }
 
