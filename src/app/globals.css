@@ -4596,61 +4596,149 @@ a.lobby-name:hover {
 }
 
 /* ══════════════════════════════════════════════════════════
-   REGION FILTER — chips de servidores
+   REGION FILTER — dropdown multi-select
    ═══════════════════════════════════════════════════════════ */
 
 .region-filter {
+  position: relative;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   margin: 0.75rem 0;
 }
 
 .region-filter-label {
   font-size: 0.72rem;
   color: var(--muted);
-  margin-right: 0.25rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  flex-shrink: 0;
 }
 
-.region-chip {
+/* Botão principal do dropdown */
+.region-dropdown-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.2rem;
-  padding: 0.2rem 0.45rem;
-  border-radius: 4px;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--panel);
-  color: var(--muted);
-  font-size: 0.7rem;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  color: var(--text);
+  font-size: 0.8rem;
   font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
   white-space: nowrap;
+  min-width: 200px;
+  text-align: left;
 }
 
-.region-chip:hover {
+.region-dropdown-btn:hover {
   border-color: var(--accent-dim);
+}
+
+.region-dropdown-chevron {
+  margin-left: auto;
+  font-size: 0.7rem;
+  transition: transform 0.15s;
+  color: var(--muted);
+}
+
+.region-dropdown-chevron.open {
+  transform: rotate(180deg);
+}
+
+/* Painel do dropdown */
+.region-dropdown-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  margin-top: 0.3rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  min-width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* Botões de ação rápida */
+.region-dropdown-actions {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  border-radius: 8px 8px 0 0;
+}
+
+.region-action-btn {
+  flex: 1;
+  padding: 0.5rem 0.6rem;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.region-action-btn:hover {
+  background: var(--border);
   color: var(--text);
 }
 
-.region-chip.active {
-  background: var(--accent);
-  color: #000;
-  border-color: var(--accent);
-  font-weight: 600;
+.region-action-btn:first-child {
+  border-right: 1px solid var(--border);
 }
 
-.region-chip-flag {
-  font-size: 0.85rem;
-  line-height: 1;
+/* Lista de checkboxes */
+.region-dropdown-list {
+  padding: 0.3rem 0;
 }
 
-.region-chip-code {
-  font-size: 0.62rem;
-  letter-spacing: 0.04em;
+.region-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 0.78rem;
+}
+
+.region-dropdown-item:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.region-checkbox {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.region-item-flag {
+  font-size: 1rem;
+  width: 1.2rem;
+  text-align: center;
+}
+
+.region-item-code {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--text);
+  min-width: 2rem;
+}
+
+.region-item-label {
+  color: var(--muted);
+  font-size: 0.7rem;
 }
 
 /* ══════════════════════════════════════════════════════════

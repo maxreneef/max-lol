@@ -12,12 +12,14 @@ export function useRegionFilter() {
 
   const raw = searchParams.get("regions") ?? "all";
   const isAll = raw === "all";
+  const isNone = raw === "none";
 
   const selected = useMemo((): string[] => {
     if (isAll) return [...ALL_REGIONS];
+    if (isNone) return [];
     // Filtra valores inválidos da URL
     return raw.split(",").filter((r) => r in PLATFORMS);
-  }, [raw, isAll]);
+  }, [raw, isAll, isNone]);
 
   const setRegions = useCallback(
     (regions: string[]) => {
@@ -35,8 +37,6 @@ export function useRegionFilter() {
   const toggle = useCallback(
     (region: string) => {
       if (selected.includes(region)) {
-        // Não deixa desselecionar todas — mantém pelo menos 1
-        if (selected.length <= 1) return;
         setRegions(selected.filter((r) => r !== region));
       } else {
         setRegions([...selected, region]);
@@ -51,5 +51,11 @@ export function useRegionFilter() {
     router.replace(`?${params.toString()}`, { scroll: false });
   }, [router, searchParams]);
 
-  return { selected, isAll, setRegions, toggle, selectAll, allRegions: ALL_REGIONS };
+  const deselectAll = useCallback(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("regions", "none");
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [router, searchParams]);
+
+  return { selected, isAll, isNone, setRegions, toggle, selectAll, deselectAll, allRegions: ALL_REGIONS };
 }
