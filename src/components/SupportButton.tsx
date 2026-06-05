@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 
-const KOFI = process.env.NEXT_PUBLIC_KOFI_USERNAME;
+const KOFI = process.env.NEXT_PUBLIC_KOFI_USERNAME ?? "maxreneef";
 
 export function SupportButton() {
   const href = KOFI ? `https://ko-fi.com/${KOFI}` : "/suporte";

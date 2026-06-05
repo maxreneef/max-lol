@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     "O Max LoL é gratuito. Se ele te ajuda nas ranked, considere apoiar com um café ou comprando seu setup gamer pelos nossos links.",
 };
 
-const KOFI = process.env.NEXT_PUBLIC_KOFI_USERNAME;
+const KOFI = process.env.NEXT_PUBLIC_KOFI_USERNAME ?? "maxreneef";
 const AMAZON_TAG = process.env.NEXT_PUBLIC_AMAZON_TAG ?? "maxlol-20";
 
 /* Produtos afiliados — substitua os ASINs/URLs pelos seus links reais após
