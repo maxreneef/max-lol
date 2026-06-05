@@ -60,10 +60,11 @@ export function AdSidebarLeft() {
       {SLOT_LEFT ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block", width: 160, height: 600 }}
+          style={{ display: "block" }}
           data-ad-client={PUB_ID}
           data-ad-slot={SLOT_LEFT}
-          data-ad-format="vertical"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
         />
       ) : (
         <AdPlaceholder width={160} height={600} label="160×600" />
@@ -84,10 +85,11 @@ export function AdSidebarRight() {
       {SLOT_RIGHT ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block", width: 160, height: 600 }}
+          style={{ display: "block" }}
           data-ad-client={PUB_ID}
           data-ad-slot={SLOT_RIGHT}
-          data-ad-format="vertical"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
         />
       ) : (
         <AdPlaceholder width={160} height={600} label="160×600" />
@@ -108,10 +110,10 @@ export function AdBanner() {
       {SLOT_BANNER ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block", minHeight: 90 }}
+          style={{ display: "block" }}
           data-ad-client={PUB_ID}
           data-ad-slot={SLOT_BANNER}
-          data-ad-format="horizontal"
+          data-ad-format="auto"
           data-full-width-responsive="true"
         />
       ) : (
@@ -133,10 +135,11 @@ export function AdRect() {
       {SLOT_RECT ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block", width: 300, height: 250 }}
+          style={{ display: "block" }}
           data-ad-client={PUB_ID}
           data-ad-slot={SLOT_RECT}
-          data-ad-format="rectangle"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
         />
       ) : (
         <AdPlaceholder width={300} height={250} label="300×250" />
@@ -167,10 +170,10 @@ export function AdStickyBottom() {
       {SLOT_STICKY ? (
         <ins
           className="adsbygoogle"
-          style={{ display: "block", minHeight: 50 }}
+          style={{ display: "block" }}
           data-ad-client={PUB_ID}
           data-ad-slot={SLOT_STICKY}
-          data-ad-format="horizontal"
+          data-ad-format="auto"
           data-full-width-responsive="true"
         />
       ) : (
