@@ -123,6 +123,29 @@ export interface SkinStatEntry {
   usageRate: number;
 }
 
+export interface MatchEntry {
+  matchId: string;
+  summonerName: string;
+  tagLine: string;
+  region: string;
+  platform: string;
+  tier: string;
+  rank: string;
+  championId: string;
+  win: boolean;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kda: string;
+  items: string[];
+  runes: { primary: string; secondary: string; keystone: string };
+  summonerSpells: [string, string];
+  skillOrder: string;
+  gameDuration: string; // "32:15"
+  gameCreation: number; // timestamp
+  queueId: number;
+}
+
 export interface ChampionBuildData {
   champId: string;
   patch: string;
@@ -157,6 +180,7 @@ export interface ChampionBuildData {
   synergies: SynergyEntry[];
   masteryRanking: MasteryEntry[];
   skinStats: SkinStatEntry[];
+  matchHistory: MatchEntry[];
 }
 
 // ── Dados de referência ───────────────────────────────────────────────────────
@@ -263,7 +287,7 @@ export function generateChampionBuildData(champ: DDChampion, allChampions: DDCha
   const wrDelta  = +(s("wrdelta") * 3 - 1.5).toFixed(1);
   const prDelta  = +(s("prdelta") * 2 - 1).toFixed(1);
   const tierVal  = wr >= 54 ? "S+" : wr >= 52 ? "S" : wr >= 50 ? "A" : wr >= 48 ? "B" : wr >= 46 ? "C" : "D";
-  const totalGames = Math.floor(20000 + s("games") * 80000);
+  let totalGames = Math.floor(20000 + s("games") * 80000);
 
   const diffLevel = champ.info.difficulty;
   const difficulty: ChampionBuildData["difficulty"] =
@@ -478,6 +502,10 @@ export function generateChampionBuildData(champ: DDChampion, allChampions: DDCha
         usageRate: +(30 - i * 4 + seeded(id, "skin" + i) * 8).toFixed(1),
       }));
 
+  // ── Match History (one-trick games) ──────────────────────────────────────────
+  const matchHistory: MatchEntry[] = generateMatchHistory(champ);
+  totalGames = matchHistory.length;
+
   return {
     champId: id, patch: "15.11", prevPatch: "15.10",
     tier: tierVal as ChampionBuildData["tier"],
@@ -489,5 +517,94 @@ export function generateChampionBuildData(champ: DDChampion, allChampions: DDCha
     startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems,
     hardCounters, easyMatchups, evenMatchups, countersH2H, synergies,
     masteryRanking, skinStats,
+    matchHistory,
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MATCH HISTORY — partidas reais de monochampions (mock)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const ONE_TRICK_PLAYERS: { name: string; tag: string; region: string; platform: string; tier: string; rank: string }[] = [
+  { name: "KierDock",        tag: "13116", region: "Brasil",           platform: "br1", tier: "Diamante",    rank: "II" },
+  { name: "LucasRei",        tag: "BR1",   region: "Brasil",           platform: "br1", tier: "Mestre",      rank: "I" },
+  { name: "JooJoo",          tag: "777",   region: "Brasil",           platform: "br1", tier: "Challenger",  rank: "800 LP" },
+  { name: "Hide on bush",    tag: "KR1",   region: "Coreia do Sul",    platform: "kr",  tier: "Challenger",  rank: "1200 LP" },
+  { name: "MidBeast",        tag: "OCE",   region: "Oceania",          platform: "oc1", tier: "Grão-Mestre", rank: "I" },
+  { name: "Quantum",         tag: "NA1",   region: "América do Norte", platform: "na1", tier: "Challenger",  rank: "900 LP" },
+  { name: "Noway4u",         tag: "EUW",   region: "Europa Oeste",     platform: "euw1", tier: "Desafiante", rank: "I" },
+  { name: "Pobelter",        tag: "NA",    region: "América do Norte", platform: "na1", tier: "Challenger",  rank: "700 LP" },
+  { name: "BaianoSensei",    tag: "BR",    region: "Brasil",           platform: "br1", tier: "Mestre",      rank: "III" },
+  { name: "Yoda",            tag: "KR2",   region: "Coreia do Sul",    platform: "kr",  tier: "Challenger",  rank: "1000 LP" },
+];
+
+function randomItem(items: string[]): string {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function generateMatchHistory(champ: DDChampion): MatchEntry[] {
+  const games = 20;
+  const matches: MatchEntry[] = [];
+  const now = Date.now();
+
+  // Itens, runas e spells típicos baseados na role
+  const roleItems: Record<string, { core: string[]; situational: string[][] }> = {
+    Top:     { core: ["3078","3153","3071"], situational: [["3111","3134","3074"],["3156","3036","3812"],["3006","3047","3133"]] },
+    Jungle:  { core: ["3153","3078","3071"], situational: [["3111","3134","3074"],["3156","3036","3812"],["3006","3047","3133"]] },
+    Mid:     { core: ["3157","3089","3135"], situational: [["3020","3100","3089"],["3152","3135","3165"],["3116","3157","3100"]] },
+    ADC:     { core: ["3031","3153","3006"], situational: [["3072","3156","3031"],["3094","3078","3153"],["3036","3006","3156"]] },
+    Suporte: { core: ["3850","3107","3190"], situational: [["3117","3068","3850"],["3001","3107","3190"],["3222","3504","3850"]] },
+  };
+
+  const role: keyof typeof roleItems = (champ.tags.includes("Marksman") ? "ADC" : champ.tags.includes("Support") ? "Suporte" : champ.tags.includes("Tank") || champ.tags.includes("Fighter") ? "Top" : champ.tags.includes("Mage") || champ.tags.includes("Assassin") ? "Mid" : "Jungle");
+
+  const build = roleItems[role];
+  const keystones = ["Conqueror","Electrocute","First Strike","Fleet Footwork","Grasp","Aery","Comet","Dark Harvest","Phase Rush","Press the Attack"];
+  const primaryTrees = ["Precision","Domination","Inspiration","Sorcery","Resolve"];
+  const secondaryTrees = ["Sorcery","Inspiration","Domination","Resolve","Precision"];
+  const spells: [string, string][] = [["Flash","Ignite"],["Flash","Teleporte"],["Flash","Barreira"],["Flash","Exaustar"],["Flash","Fantasma"]];
+  const queues = [420, 440, 420, 420, 450, 420, 420]; // maioria Solo/Duo
+
+  for (let i = 0; i < games; i++) {
+    const player = ONE_TRICK_PLAYERS[i % ONE_TRICK_PLAYERS.length];
+    const win = seeded(champ.id, `match${i}win`) > 0.35; // ~65% WR pra um monochampion
+    const dur = Math.floor(1500 + seeded(champ.id, `match${i}dur`) * 1200); // 25-45 min
+    const mins = Math.floor(dur / 60);
+    const secs = dur % 60;
+
+    const k = 3 + seeded(champ.id, `match${i}k`) * 15;
+    const d = 1 + seeded(champ.id, `match${i}d`) * 8;
+    const a = 2 + seeded(champ.id, `match${i}a`) * 12;
+
+    const itemSet = i < 13 ? build.core : build.situational[i % 3];
+    const keystone = keystones[Math.floor(seeded(champ.id, `match${i}ks`) * keystones.length)];
+    const primaryTree = primaryTrees[Math.floor(seeded(champ.id, `match${i}pt`) * primaryTrees.length)];
+    const secondaryTree = secondaryTrees[Math.floor(seeded(champ.id, `match${i}st`) * secondaryTrees.length)];
+    const spell = spells[Math.floor(seeded(champ.id, `match${i}sp`) * spells.length)];
+
+    matches.push({
+      matchId: `BR1_${3000000000 + i}`,
+      summonerName: player.name,
+      tagLine: player.tag,
+      region: player.region,
+      platform: player.platform,
+      tier: player.tier,
+      rank: player.rank,
+      championId: champ.id,
+      win,
+      kills: Math.floor(k),
+      deaths: Math.floor(d),
+      assists: Math.floor(a),
+      kda: `${Math.floor(k)}/${Math.floor(d)}/${Math.floor(a)}`,
+      items: itemSet,
+      runes: { primary: primaryTree, secondary: secondaryTree, keystone },
+      summonerSpells: spell,
+      skillOrder: ["Q","W","E"].sort(() => seeded(champ.id, `match${i}so`) - 0.5).join(">"),
+      gameDuration: `${mins}:${String(secs).padStart(2, "0")}`,
+      gameCreation: now - i * 3600000,
+      queueId: queues[i % queues.length],
+    });
+  }
+
+  return matches;
 }

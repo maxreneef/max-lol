@@ -13,6 +13,7 @@ import type {
   MatchupEntry,
   CounterHeadToHead,
   RuneSetup,
+  MatchEntry,
 } from "@/lib/mockChampData";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ const TIER_COLOR: Record<string, string> = {
   "S+": "#0ac8b9", S: "#0ac8b9", A: "#1a9e6e", B: "#c8aa6e", C: "#e06c3b", D: "#e84057",
 };
 
-const TABS = ["Build", "Counters", "One Tricks", "Pro Builds", "Guia"] as const;
+const TABS = ["Build", "Counters", "Partidas", "One Tricks", "Pro Builds", "Guia"] as const;
 type Tab = typeof TABS[number];
 
 const ABILITY_COLORS: Record<string, string> = { Q: "#0ac8b9", W: "#c8aa6e", E: "#9faafc", R: "#e84057" };
@@ -449,6 +450,118 @@ function MatchupList({ matchups, champName, onSelect, activeId }: { matchups: Ma
   );
 }
 
+// ── Matches Tab (partidas recentes dos monochampions) ──────────────────────────
+
+function MatchesTab({ buildData }: { buildData: ChampionBuildData }) {
+  if (!buildData.matchHistory || buildData.matchHistory.length === 0) {
+    return (
+      <div className="tab-content">
+        <p className="muted-sm" style={{ padding: "2rem", textAlign: "center" }}>Nenhuma partida encontrada.</p>
+      </div>
+    );
+  }
+
+  const wins = buildData.matchHistory.filter((m) => m.win).length;
+  const total = buildData.matchHistory.length;
+
+  return (
+    <div className="tab-content">
+      {/* Resumo */}
+      <section className="build-section">
+        <div style={{ display: "flex", gap: "2rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+          <div>
+            <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>Partidas analisadas</span>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>{total}</div>
+          </div>
+          <div>
+            <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>Win Rate</span>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800, color: wrColor((wins / total) * 100) }}>
+              {((wins / total) * 100).toFixed(1)}%
+            </div>
+          </div>
+          <div>
+            <span style={{ color: "var(--muted)", fontSize: "0.72rem" }}>Vitórias / Derrotas</span>
+            <div style={{ fontSize: "1.3rem", fontWeight: 800 }}>
+              <span style={{ color: "#1a9e6e" }}>{wins}V</span>{" "}
+              <span style={{ color: "#e84057" }}>{total - wins}D</span>
+            </div>
+          </div>
+        </div>
+        <p className="muted-sm">
+          ⚡ Estas partidas são a fonte de todas as estatísticas de build, runas e win rate exibidas nas outras abas.
+          Dados coletados exclusivamente de jogadores monochampions (50+ partidas com este campeão).
+        </p>
+      </section>
+
+      {/* Tabela de partidas */}
+      <section className="build-section">
+        <h3 className="build-section-title">Partidas Recentes — Monochampions</h3>
+        <div className="matches-table-wrap">
+          <table className="matches-table">
+            <thead>
+              <tr>
+                <th>Jogador</th>
+                <th>Elo</th>
+                <th>Região</th>
+                <th>Resultado</th>
+                <th>KDA</th>
+                <th>Itens</th>
+                <th>Runas</th>
+                <th>Ordem</th>
+                <th>Duração</th>
+              </tr>
+            </thead>
+            <tbody>
+              {buildData.matchHistory.map((m, i) => {
+                const REGION_FLAG: Record<string, string> = { br1: "🇧🇷", kr: "🇰🇷", euw1: "🇪🇺", na1: "🇺🇸", oc1: "🇦🇺", };
+                return (
+                  <tr key={i} className={m.win ? "match-row-win" : "match-row-loss"}>
+                    <td>
+                      <div className="match-player-name">{m.summonerName}</div>
+                      <div className="match-player-tag">#{m.tagLine}</div>
+                    </td>
+                    <td>
+                      <span className="match-tier">{m.tier} {m.rank}</span>
+                    </td>
+                    <td>
+                      {REGION_FLAG[m.platform] ?? "🌐"} {m.region.slice(0, 12)}
+                    </td>
+                    <td>
+                      <span className={`match-result ${m.win ? "win" : "loss"}`}>
+                        {m.win ? "Vitória" : "Derrota"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="match-kda">{m.kda}</span>
+                    </td>
+                    <td>
+                      <div className="match-items-row">
+                        {m.items.map((item, j) => (
+                          <ItemIcon key={j} id={item} size={22} />
+                        ))}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="match-runes-info">
+                        <span className="match-keystone">{m.runes.keystone}</span>
+                        <span className="match-trees">{m.runes.primary}/{m.runes.secondary}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span className="match-skill-order">{m.skillOrder}</span>
+                    </td>
+                    <td className="muted-sm">{m.gameDuration}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // ── One Tricks Tab ─────────────────────────────────────────────────────────────
 
 function OneTricksTab({ buildData }: { buildData: ChampionBuildData }) {
@@ -664,6 +777,7 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
         <div className="champ-tab-content">
           {normalizedTab === "Build" && <BuildTab buildData={buildData} detail={detail} ddBase={ddBase} />}
           {normalizedTab === "Counters" && <CountersTab buildData={buildData} champName={champ.name} />}
+          {normalizedTab === "Partidas" && <MatchesTab buildData={buildData} />}
           {normalizedTab === "One Tricks" && <OneTricksTab buildData={buildData} />}
           {normalizedTab === "Pro Builds" && <ProBuildsTab champName={champ.name} />}
           {normalizedTab === "Guia" && <GuiaTab champName={champ.name} />}

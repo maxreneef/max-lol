@@ -4697,6 +4697,130 @@ a.lobby-name:hover {
   border-right: 1px solid var(--border);
 }
 
+/* ══════════════════════════════════════════════════════════
+   MATCHES TABLE — partidas dos monochampions
+   ═══════════════════════════════════════════════════════════ */
+
+.matches-table-wrap {
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.matches-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.matches-table thead {
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.matches-table th {
+  padding: 0.5rem 0.55rem;
+  font-size: 0.67rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--border);
+}
+
+.matches-table td {
+  padding: 0.5rem 0.55rem;
+  vertical-align: middle;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+}
+
+.match-row-win {
+  background: rgba(26,158,110,0.04);
+}
+
+.match-row-loss {
+  background: rgba(232,64,87,0.03);
+}
+
+.match-row-win:hover,
+.match-row-loss:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.match-player-name {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.match-player-tag {
+  font-size: 0.65rem;
+  color: var(--muted);
+}
+
+.match-tier {
+  font-size: 0.7rem;
+  color: var(--accent);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.match-result {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.match-result.win {
+  background: rgba(26,158,110,0.2);
+  color: #1a9e6e;
+}
+
+.match-result.loss {
+  background: rgba(232,64,87,0.2);
+  color: #e84057;
+}
+
+.match-kda {
+  font-weight: 700;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.match-items-row {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+
+.match-runes-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.match-keystone {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.match-trees {
+  font-size: 0.62rem;
+  color: var(--muted);
+}
+
+.match-skill-order {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
 /* Lista de checkboxes */
 .region-dropdown-list {
   padding: 0.3rem 0;
