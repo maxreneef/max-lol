@@ -209,20 +209,65 @@ function LaneFilter({ lane, onChange }: { lane: string; onChange: (l: string) =>
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string }) {
-  const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory } = buildData;
+  const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory: mockHistory } = buildData;
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
-  const [selectedCore, setSelectedCore] = useState(0); // qual core build foi selecionada
-  const [enemyFilter, setEnemyFilter] = useState(""); // filtro de counter-pick
-  const [laneFilterLocal, setLaneFilterLocal] = useState("Todas");
+  const [selectedCore, setSelectedCore] = useState(0);
+  const [enemyFilter, setEnemyFilter] = useState("");
+  const [realMatches, setRealMatches] = useState<MatchEntry[] | null>(null);
+  const [loadingMatches, setLoadingMatches] = useState(false);
 
-  const wins = (matchHistory ?? []).filter((m) => m.win).length;
-  const total = (matchHistory ?? []).length;
+  // Busca partidas REAIS da Riot API
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchReal() {
+      setLoadingMatches(true);
+      try {
+        const res = await fetch(`/api/champion/${buildData.champId}/matches?region=br1`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.matches?.length > 0) {
+          // Converte o formato da API pro MatchEntry
+          setRealMatches(data.matches.map((m: Record<string, unknown>) => ({
+            matchId: m.matchId as string,
+            summonerName: m.summonerName as string,
+            tagLine: (m.tagLine as string) || "",
+            region: (m.region as string) || "BR",
+            platform: (m.platform as string) || "br1",
+            tier: (m.tier as string) || "",
+            rank: (m.rank as string) || "",
+            championId: m.championId as string,
+            win: m.win as boolean,
+            kills: m.kills as number,
+            deaths: m.deaths as number,
+            assists: m.assists as number,
+            kda: m.kda as string,
+            items: (m.items as string[]) || [],
+            runes: m.runes as { primary: string; secondary: string; keystone: string },
+            summonerSpells: (m.summonerSpells as [string, string]) || ["",""],
+            skillOrder: (m.skillOrder as string) || "",
+            gameDuration: m.gameDuration as string,
+            gameCreation: m.gameCreation as number,
+            queueId: m.queueId as number,
+          })));
+        }
+      } catch { /* fallback para mock */ }
+      finally { if (!cancelled) setLoadingMatches(false); }
+    }
+    fetchReal();
+    return () => { cancelled = true; };
+  }, [buildData.champId]);
 
-  // Filtra partidas por lane e/ou enemy champion
+  // Usa partidas reais se disponíveis, senão mock
+  const matchHistory = realMatches ?? mockHistory ?? [];
+  const isRealData = realMatches !== null && realMatches.length > 0;
+
+  const wins = matchHistory.filter((m) => m.win).length;
+  const total = matchHistory.length;
+
+  // Filtra partidas
   const filteredMatches = useMemo(() => {
-    if (!matchHistory) return [];
     return matchHistory.filter((m) => {
-      if (enemyFilter && !m.kda.includes(enemyFilter)) return false; // mock: sem enemy id, só placeholder
+      if (enemyFilter && !m.kda.includes(enemyFilter)) return false;
       return true;
     });
   }, [matchHistory, enemyFilter]);
@@ -483,7 +528,11 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
             </span>
           </div>
           <p className="muted-sm" style={{marginBottom:"0.5rem"}}>
-            ⚡ Dados de monochampions (700k+ maestria, Diamante+) de todas as regiões selecionadas. Clique numa partida para ver detalhes.
+            {isRealData
+              ? "✅ Dados REAIS da Riot API — partidas de jogadores do topo do leaderboard. Clique para ver detalhes."
+              : loadingMatches
+                ? "⏳ Buscando partidas reais da Riot API..."
+                : "⚠️ Dados de demonstração. Configure a Riot API Key para ver partidas reais."}
           </p>
 
           <div className="matches-table-wrap">
