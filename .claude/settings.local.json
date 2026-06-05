@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\" -ErrorAction SilentlyContinue; if \\(-not \\(Test-Path \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\"\\)\\) { \"Directory does not exist\" } else { \"Directory exists\" })"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\" -ErrorAction SilentlyContinue; if \\(-not \\(Test-Path \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\"\\)\\) { \"Directory does not exist\" } else { \"Directory exists\" })",
+      "Bash(mkdir -p \"C:/Users/maxre/Downloads/max-lol/src/app/api/champion/[champId]/ai-analysis\" && echo \"ok\")",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(git commit -m 'fix: ads.txt com Publisher ID real do AdSense \\(pub-5488213461319588\\) *)",
+      "Bash(git commit -m 'fix: Ko-fi username hardcoded \\(maxreneef\\) como fallback *)",
+      "Bash(git commit -m 'feat: Amazon Associates ID maxlol-20 ativo — 8 produtos afiliados com links reais *)",
+      "Bash(not exist *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\maxre\\\\Downloads\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\maxre\" -Directory)",
+      "PowerShell(New-Item *)",
+      "PowerShell(Move-Item *)",
+      "PowerShell(robocopy \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\" \"C:\\\\Users\\\\maxre\\\\Projetos\\\\max-lol\" /E /COPYALL /DCOPY:T /R:2 /W:2)",
+      "PowerShell(robocopy \"C:\\\\Users\\\\maxre\\\\Downloads\\\\max-lol\" \"C:\\\\Users\\\\maxre\\\\Projetos\\\\max-lol\" /E /COPY:DAT /DCOPY:T /R:2 /W:2 /XD node_modules .next)"
     ]
   }
 }

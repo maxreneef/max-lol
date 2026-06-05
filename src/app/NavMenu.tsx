@@ -16,6 +16,7 @@ const NAV: NavGroup[] = [
       { href: "/compare",   label: "Comparar",  desc: "Dois invocadores lado a lado" },
       { href: "/lobby",     label: "Lobby",     desc: "Analisar até 10 jogadores" },
       { href: "/leaderboard", label: "Ranking", desc: "Challenger, GM e Master" },
+      { href: "/pro",       label: "Pro Players", desc: "Jogadores profissionais" },
     ],
   },
   {

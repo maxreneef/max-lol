@@ -12,23 +12,43 @@ export default function Home() {
   return (
     <PageWithAds>
     <main>
-      {/* Hero */}
-      <section className="home-hero">
-        <div className="home-hero-inner">
-          <h1 className="home-title">
-            Domine o <span className="gold">League of Legends</span> com dados reais
-          </h1>
-          <p className="home-sub">
-            Perfis de invocador, histórico de partidas, tier lists, análise de
-            lobby e muito mais — focado no servidor brasileiro.
-          </p>
-          <HomeSearch />
+      {/* Hero — busca dupla + cartões de diferencial */}
+      <section className="hero-section">
+        <h1 className="hero-title">
+          Max<span> LoL</span>
+        </h1>
+        <p className="hero-subtitle">
+          O primeiro site de estatísticas de League of Legends verdadeiramente
+          global — com dados de <strong>todos os servidores</strong> e foco
+          especial no <strong>Brasil</strong>.
+        </p>
 
-          <div className="home-cta" style={{ marginTop: "1rem" }}>
-            <Link href="/tierlist" className="btn btn-lg">Tier List</Link>
-            <Link href="/rotation" className="btn btn-lg">Rotação gratuita</Link>
-            <Link href="/items" className="btn btn-lg">Itens</Link>
+        {/* Cartões do diferencial */}
+        <div className="hero-cards">
+          <div className="hero-card">
+            <div className="hero-card-icon">☝️</div>
+            <h3>Monochampions</h3>
+            <p>Builds e counters de especialistas (one-tricks com 50+ partidas)</p>
           </div>
+          <div className="hero-card">
+            <div className="hero-card-icon">🇧🇷</div>
+            <h3>Foco Brasil</h3>
+            <p>Dados de jogadores brasileiros — ao contrário de outros sites</p>
+          </div>
+          <div className="hero-card">
+            <div className="hero-card-icon">🌐</div>
+            <h3>16 Servidores</h3>
+            <p>Filtre por qualquer combinação de regiões: BR, KR, NA, EUW...</p>
+          </div>
+        </div>
+
+        {/* Busca dupla */}
+        <HomeSearch />
+
+        <div className="home-cta" style={{ marginTop: "1.25rem" }}>
+          <Link href="/tierlist" className="btn btn-lg">Tier List</Link>
+          <Link href="/champions" className="btn btn-lg">Campeões</Link>
+          <Link href="/pro" className="btn btn-lg">Pro Players</Link>
         </div>
       </section>
 
@@ -108,7 +128,7 @@ const FEATURES = [
 
 const STATS = [
   { val: "170+", label: "Campeões" },
-  { val: "6",    label: "Regiões" },
+  { val: "16",   label: "Servidores" },
   { val: "26",   label: "Páginas" },
   { val: "100%", label: "Gratuito" },
 ];
@@ -127,6 +147,6 @@ const ROADMAP = [
   { title: "Banco de Itens & Runas",    desc: "Referência completa com stats e filtros.", live: true },
   { title: "Rotação gratuita",          desc: "Campeões disponíveis esta semana.", live: true },
   { title: "Busca por habilidade",      desc: "Encontre campeões pelo efeito de qualquer skill.", live: true },
-  { title: "Dados reais de win rate",   desc: "Calculado a partir de partidas coletadas com Production Key.", live: false },
-  { title: "Análise de builds reais",   desc: "Items e runas mais eficientes por patch e elo.", live: false },
+  { title: "Monochampions vs Todos",    desc: "Toggle entre dados de one-tricks e dados gerais em cada campeão.", live: false },
+  { title: "Pro Players brasileiros",   desc: "Busca e ranking de jogadores profissionais com foco no CBLOL.", live: false },
 ];

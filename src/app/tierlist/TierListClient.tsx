@@ -2,6 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { RegionFilter } from "@/components/RegionFilter";
+import { useRegionFilter } from "@/lib/regionFilter";
+import { PLATFORMS } from "@/lib/types";
+import { Suspense } from "react";
 
 type TierEntry = {
   id: string;
@@ -26,7 +30,8 @@ const TIER_COLORS: Record<string, string> = {
 const ROLES = ["Todos", "Top", "Jungle", "Mid", "ADC", "Support"];
 const TIERS = ["Todos", "S", "A", "B", "C", "D"];
 
-export function TierListClient({ entries }: { entries: TierEntry[] }) {
+function TierListInner({ entries }: { entries: TierEntry[] }) {
+  const { selected: regions, isAll } = useRegionFilter();
   const [role, setRole] = useState("Todos");
   const [tierFilter, setTierFilter] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -59,8 +64,10 @@ export function TierListClient({ entries }: { entries: TierEntry[] }) {
     <main className="container">
       <h1 style={{ fontSize: "1.8rem", marginBottom: "0.5rem" }}>Tier List</h1>
       <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
-        Ranking de campeões por win rate — Patch 15.11 · BR1 (dados representativos)
+        Ranking de campeões por win rate — Patch 15.11 · Dados representativos
       </p>
+
+      <RegionFilter showLabel />
 
       {/* Filtros */}
       <div className="tl-filters">
@@ -210,5 +217,13 @@ function ChampCard({ c }: { c: TierEntry }) {
       <p className="tl-card-name">{c.name}</p>
       <p className="tl-card-wr">{c.winRate}%</p>
     </Link>
+  );
+}
+
+export function TierListClient({ entries }: { entries: TierEntry[] }) {
+  return (
+    <Suspense fallback={<div style={{ padding: "2rem", textAlign: "center", color: "var(--muted)" }}>Carregando...</div>}>
+      <TierListInner entries={entries} />
+    </Suspense>
   );
 }

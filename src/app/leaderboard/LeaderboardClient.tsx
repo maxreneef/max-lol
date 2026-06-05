@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PLATFORMS } from "@/lib/types";
+import { RegionFilter } from "@/components/RegionFilter";
 import type { LeagueList, LeagueEntry } from "@/lib/types";
 
 type Tier = "challenger" | "grandmaster" | "master";
@@ -105,6 +106,8 @@ export function LeaderboardClient() {
       <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
         Os melhores invocadores por região e fila ranqueada. Clique no nome para ver o perfil.
       </p>
+
+      <RegionFilter showLabel compact />
 
       <div className="lb-filters">
         <select value={region} onChange={(e) => setRegion(e.target.value)} className="tl-sort">

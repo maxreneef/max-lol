@@ -36,12 +36,22 @@ export interface SummonerProfile {
 }
 
 export const PLATFORMS = {
-  br1: { label: "Brasil (BR1)", regional: "americas" },
-  na1: { label: "Norte América (NA1)", regional: "americas" },
-  euw1: { label: "Europa Oeste (EUW1)", regional: "europe" },
-  kr: { label: "Coreia (KR)", regional: "asia" },
-  las: { label: "LAS", regional: "americas" },
-  lan: { label: "LAN", regional: "americas" },
+  br1:   { label: "Brasil",                regional: "americas", flag: "br" },
+  na1:   { label: "América do Norte",      regional: "americas", flag: "us" },
+  euw1:  { label: "Europa Oeste",          regional: "europe",   flag: "euw" },
+  eune1: { label: "Europa Norte/Leste",    regional: "europe",   flag: "eune" },
+  kr:    { label: "Coreia do Sul",         regional: "asia",     flag: "kr" },
+  jp1:   { label: "Japão",                 regional: "asia",     flag: "jp" },
+  oc1:   { label: "Oceania",               regional: "asia",     flag: "oce" },
+  la1:   { label: "América Latina Norte",  regional: "americas", flag: "lan" },
+  la2:   { label: "América Latina Sul",    regional: "americas", flag: "las" },
+  tr1:   { label: "Turquia",               regional: "europe",   flag: "tr" },
+  ru:    { label: "Rússia",                regional: "europe",   flag: "ru" },
+  sg2:   { label: "Singapura",             regional: "asia",     flag: "sg" },
+  tw2:   { label: "Taiwan",                regional: "asia",     flag: "tw" },
+  vn2:   { label: "Vietnã",                regional: "asia",     flag: "vn" },
+  ph2:   { label: "Filipinas",             regional: "asia",     flag: "ph" },
+  th2:   { label: "Tailândia",             regional: "asia",     flag: "th" },
 } as const;
 
 export type Platform = keyof typeof PLATFORMS;

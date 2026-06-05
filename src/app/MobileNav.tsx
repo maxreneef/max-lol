@@ -11,6 +11,7 @@ const GROUPS = [
       { href: "/compare",     label: "Comparar" },
       { href: "/lobby",       label: "Análise de Lobby" },
       { href: "/leaderboard", label: "Ranking" },
+      { href: "/pro",         label: "Pro Players" },
     ],
   },
   {
