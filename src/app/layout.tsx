@@ -6,6 +6,7 @@ import { MobileNav } from "./MobileNav";
 import { ThemeToggle } from "./ThemeToggle";
 import { CookieConsent } from "@/components/CookieConsent";
 import { SupportButton } from "@/components/SupportButton";
+import { AdStickyBottom } from "@/components/AdUnit";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -123,6 +124,7 @@ export default function RootLayout({
           </div>
         </footer>
 
+        <AdStickyBottom />
         <SupportButton />
         <CookieConsent />
       </body>

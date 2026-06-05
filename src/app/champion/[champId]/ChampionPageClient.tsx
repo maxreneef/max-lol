@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import type { DDChampion, DDChampionFull } from "@/lib/ddragon";
+import { AdBanner } from "@/components/AdUnit";
 import type {
   ChampionBuildData,
   ItemSet,
@@ -926,6 +927,9 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
             </button>
           ))}
         </div>
+
+        {/* Banner ad between AI analysis and tab content — igual OP.GG */}
+        <AdBanner />
 
         {/* Tab content */}
         <div className="champ-tab-content">

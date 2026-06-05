@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { fetchChampions, mockTierStats, primaryRole, championIcon } from "@/lib/ddragon";
 import { TierListClient } from "./TierListClient";
+import { PageWithAds } from "@/components/PageWithAds";
 
 export const metadata: Metadata = {
   title: "Tier List — Max LoL",
@@ -30,5 +31,5 @@ export default async function TierListPage() {
       b.winRate - a.winRate
   );
 
-  return <TierListClient entries={entries} />;
+  return <PageWithAds><TierListClient entries={entries} /></PageWithAds>;
 }

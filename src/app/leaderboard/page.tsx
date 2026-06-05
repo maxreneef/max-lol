@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LeaderboardClient } from "./LeaderboardClient";
+import { PageWithAds } from "@/components/PageWithAds";
 
 export const metadata: Metadata = {
   title: "Leaderboard — Max LoL",
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function LeaderboardPage() {
-  return <LeaderboardClient />;
+  return <PageWithAds><LeaderboardClient /></PageWithAds>;
 }

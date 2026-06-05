@@ -3115,21 +3115,123 @@ a.lobby-name:hover {
 }
 
 /* ══════════════════════════════════════════════════════════
-   MONETIZAÇÃO
+   MONETIZAÇÃO — LAYOUT OP.GG STYLE
 ══════════════════════════════════════════════════════════ */
 
-/* ── AdSense units ── */
-.ad-unit-wrap {
-  width: 100%;
-  overflow: hidden;
-  background: rgba(255,255,255,0.02);
-  border: 1px dashed rgba(255,255,255,0.08);
+/* ── 3-column layout: [sidebar] [content] [sidebar] ── */
+.page-ads-layout {
+  display: grid;
+  grid-template-columns: 180px 1fr 180px;
+  grid-template-areas: "left main right";
+  max-width: 1560px;
+  margin: 0 auto;
+  align-items: start;
+  gap: 0;
+}
+
+.page-ads-left  { grid-area: left;  }
+.page-ads-main  { grid-area: main;  min-width: 0; }
+.page-ads-right { grid-area: right; }
+
+/* Sidebars somem em telas estreitas */
+@media (max-width: 1380px) {
+  .page-ads-layout {
+    grid-template-columns: 1fr;
+    grid-template-areas: "main";
+  }
+  .page-ads-left,
+  .page-ads-right { display: none; }
+}
+
+/* ── Sidebar ad (160×600) ── */
+.ad-sidebar {
+  position: sticky;
+  top: 72px;   /* abaixo do header */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0.5rem;
+  gap: 0.4rem;
+}
+
+.ad-sidebar-left  { padding-left:  0.75rem; }
+.ad-sidebar-right { padding-right: 0.75rem; }
+
+/* ── Label "Publicidade" ── */
+.ad-label {
+  font-size: 0.6rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  opacity: 0.5;
+  display: block;
+  text-align: center;
+  margin-bottom: 2px;
+}
+
+/* ── Placeholder (visível antes da aprovação do AdSense) ── */
+.ad-placeholder {
+  background: rgba(255,255,255,0.025);
+  border: 1px dashed rgba(255,255,255,0.1);
   border-radius: 6px;
-  margin: 1rem 0;
-  min-height: 90px;
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+}
+
+.ad-placeholder-label {
+  font-size: 0.65rem;
+  color: var(--muted);
+  opacity: 0.4;
+  padding: 0.5rem;
+  line-height: 1.4;
+}
+
+/* ── Banner horizontal dentro do conteúdo ── */
+.ad-banner-wrap {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+/* ── Rectangle 300×250 ── */
+.ad-rect-wrap {
+  margin: 1rem auto;
+  width: fit-content;
+}
+
+/* ── Sticky bottom (mobile) ── */
+.ad-sticky-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 4px 2rem 4px 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.3);
+}
+
+.ad-sticky-close {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  line-height: 1;
+}
+
+/* Mostra o sticky só no mobile */
+@media (min-width: 768px) {
+  .ad-sticky-bottom { display: none; }
 }
 
 /* ── Floating Ko-fi button ── */

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { fetchChampions, fetchChampionDetail, DD_BASE, splashArt, championIcon } from "@/lib/ddragon";
 import { generateChampionBuildData } from "@/lib/mockChampData";
 import { ChampionPageClient } from "./ChampionPageClient";
+import { PageWithAds } from "@/components/PageWithAds";
 
 export const revalidate = 3600;
 
@@ -32,13 +33,15 @@ export default async function ChampionPage({
   const buildData = generateChampionBuildData(champ, allChampions);
 
   return (
-    <ChampionPageClient
-      champ={champ}
-      detail={detail}
-      buildData={buildData}
-      allChampions={allChampions}
-      ddBase={DD_BASE}
-      splashUrl={splashArt(champ.id, 0)}
-    />
+    <PageWithAds>
+      <ChampionPageClient
+        champ={champ}
+        detail={detail}
+        buildData={buildData}
+        allChampions={allChampions}
+        ddBase={DD_BASE}
+        splashUrl={splashArt(champ.id, 0)}
+      />
+    </PageWithAds>
   );
 }
