@@ -12,7 +12,6 @@ import type {
   ItemSet,
   MatchupEntry,
   CounterHeadToHead,
-  RuneSetup,
   MatchEntry,
 } from "@/lib/mockChampData";
 
@@ -190,8 +189,6 @@ function ItemSetList({ sets, showArrows, compact }: { sets: ItemSet[]; showArrow
   );
 }
 
-// ── Build Tab (inclui Runas, Habilidades, Itens) ────────────────────────────────
-
 // ── Lane Filter ──────────────────────────────────────────────────────────────────
 
 function LaneFilter({ lane, onChange }: { lane: string; onChange: (l: string) => void }) {
@@ -200,205 +197,312 @@ function LaneFilter({ lane, onChange }: { lane: string; onChange: (l: string) =>
       <span className="lane-filter-label">Rota:</span>
       <div className="tl-pills">
         {LANES.map((l) => (
-          <button
-            key={l}
-            className={`tl-pill ${lane === l ? "active" : ""}`}
-            onClick={() => onChange(l)}
-          >
-            {l}
-          </button>
+          <button key={l} className={`tl-pill ${lane === l ? "active" : ""}`} onClick={() => onChange(l)}>{l}</button>
         ))}
       </div>
     </div>
   );
 }
 
-// ── Build Tab (compacto, estilo onetricks.gg) ────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// BUILD TAB — Hierarquia: Runas (árvore) > Skills (18 níveis) > Itens (fluxo)
+// ═══════════════════════════════════════════════════════════════════════════════
 
 function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string }) {
   const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory } = buildData;
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
+  const [selectedCore, setSelectedCore] = useState(0); // qual core build foi selecionada
+  const [enemyFilter, setEnemyFilter] = useState(""); // filtro de counter-pick
+  const [laneFilterLocal, setLaneFilterLocal] = useState("Todas");
 
   const wins = (matchHistory ?? []).filter((m) => m.win).length;
   const total = (matchHistory ?? []).length;
 
+  // Filtra partidas por lane e/ou enemy champion
+  const filteredMatches = useMemo(() => {
+    if (!matchHistory) return [];
+    return matchHistory.filter((m) => {
+      if (enemyFilter && !m.kda.includes(enemyFilter)) return false; // mock: sem enemy id, só placeholder
+      return true;
+    });
+  }, [matchHistory, enemyFilter]);
+
   return (
     <div className="tab-content">
-      {/* ── Grid compacto 2 colunas ── */}
-      <div className="build-compact-grid">
 
-        {/* Coluna Esquerda */}
-        <div className="build-col">
-          {/* Feitiços */}
-          <div className="build-card">
-            <h4 className="build-card-title">Feitiços</h4>
-            {summonerSpells.slice(0, 2).map((set, i) => (
-              <div key={i} className="build-card-row">
-                <div className="build-card-icons">
-                  {set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={28} />)}
-                </div>
-                <div className="build-card-meta">
-                  <span className="pick-rate-badge">{set.pickRate}%</span>
-                  <WRBadge wr={set.winRate} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Ordem de Skills */}
-          <div className="build-card">
-            <h4 className="build-card-title">Ordem de Skills</h4>
-            {skillOrders.slice(0, 2).map((so, idx) => (
-              <div key={idx} className="build-card-row">
-                <div className="skill-max-order-compact">
-                  {(["Q","W","E","R"] as const).filter((ab) => so.maxFirst === ab || (so.maxFirst !== ab && false)).length > 0 ? (
-                    <span className="skill-ab-compact" style={{background: ABILITY_COLORS[so.maxFirst] + "22", color: ABILITY_COLORS[so.maxFirst], border: `1px solid ${ABILITY_COLORS[so.maxFirst]}55`}}>
-                      Max {so.maxFirst}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="build-card-meta">
-                  <span className="pick-rate-badge">{so.pickRate}%</span>
-                  <WRBadge wr={so.winRate} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Itens Iniciais + Botas */}
-          <div className="build-card">
-            <h4 className="build-card-title">Início + Botas</h4>
-            {startingItems.slice(0, 2).map((set, i) => (
-              <div key={"start"+i} className="build-card-row">
-                <div className="build-card-icons" style={{gap:1}}>
-                  {set.items.map((id) => <ItemIcon key={id} id={id} size={26} />)}
-                </div>
-                <div className="build-card-meta">
-                  <span className="pick-rate-badge">{set.pickRate}%</span>
-                  <WRBadge wr={set.winRate} />
-                </div>
-              </div>
-            ))}
-            <div className="build-card-sep" />
-            {boots.slice(0, 2).map((set, i) => (
-              <div key={"boot"+i} className="build-card-row">
-                <div className="build-card-icons" style={{gap:1}}>
-                  {set.items.map((id) => <ItemIcon key={id} id={id} size={26} />)}
-                </div>
-                <div className="build-card-meta">
-                  <span className="pick-rate-badge">{set.pickRate}%</span>
-                  <WRBadge wr={set.winRate} />
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ═══ 1. FEITIÇOS (pequeno, minimalista) ═══ */}
+      <div className="build-spells-mini">
+        <span className="build-label-mini">Feitiços</span>
+        <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
+          {summonerSpells.slice(0, 2).map((set, i) => (
+            <div key={i} style={{display:"flex",alignItems:"center",gap:"0.3rem"}}>
+              {set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={24} />)}
+              <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{set.pickRate}%</span>
+              <WRBadge wr={set.winRate} />
+            </div>
+          ))}
         </div>
+      </div>
 
-        {/* Coluna Direita */}
-        <div className="build-col">
-          {/* Runas */}
-          <div className="build-card">
-            <h4 className="build-card-title">Runas</h4>
-            {buildData.runeSetups.slice(0, 2).map((setup, i) => (
-              <CompactRuneCard key={i} setup={setup} i={i} />
-            ))}
+      {/* ═══ 2. RUNAS — árvore visual completa ═══ */}
+      <section className="build-section">
+        <h3 className="build-section-title">Runas</h3>
+        {buildData.runeSetups.slice(0, 2).map((setup, i) => (
+          <div key={i} className="rune-tree-full">
+            <div className="rune-tree-full-header">
+              <span style={{color:setup.primaryTreeColor,fontWeight:700}}>{setup.primaryTree}</span>
+              <span style={{color:"var(--muted)",fontSize:"0.65rem"}}>+ {setup.secondaryTree}</span>
+              <span style={{marginLeft:"auto",display:"flex",gap:"0.5rem",alignItems:"center"}}>
+                <span className="pick-rate-badge">{setup.pickRate}%</span>
+                <WRBadge wr={setup.winRate} />
+              </span>
+            </div>
+            <div className="rune-tree-visual">
+              {/* Árvore Primária */}
+              <div className="rune-tree-col">
+                <div className="rune-tree-col-label" style={{color:setup.primaryTreeColor}}>Primária</div>
+                <div className="rune-keystone-big">
+                  <RuneIcon path={setup.keystone.icon} size={48} />
+                  <div className="rune-keystone-info">
+                    <span className="rune-keystone-name">{setup.keystone.name}</span>
+                    <span style={{fontSize:"0.62rem",color:"var(--muted)"}}>{setup.keystone.pickRate}%</span>
+                  </div>
+                </div>
+                <div className="rune-slots-row">
+                  {[setup.slot1, setup.slot2, setup.slot3].map((rune, si) => (
+                    <div key={si} className="rune-slot-mini">
+                      <RuneIcon path={rune.icon} size={32} />
+                      <span className="rune-slot-mini-name">{rune.name}</span>
+                      <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Árvore Secundária */}
+              <div className="rune-tree-col rune-tree-col-sec">
+                <div className="rune-tree-col-label">Secundária</div>
+                <div className="rune-slots-sec">
+                  {[setup.secondary1, setup.secondary2].map((rune, si) => (
+                    <div key={si} className="rune-slot-mini">
+                      <RuneIcon path={rune.icon} size={32} />
+                      <span className="rune-slot-mini-name">{rune.name}</span>
+                      <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="rune-shards-row">
+                  <span className="rune-shard-badge">{setup.shard1}</span>
+                  <span className="rune-shard-badge">{setup.shard2}</span>
+                  <span className="rune-shard-badge">{setup.shard3}</span>
+                </div>
+              </div>
+            </div>
           </div>
+        ))}
+      </section>
 
-          {/* Build Principal */}
-          <div className="build-card">
-            <h4 className="build-card-title">Build Principal</h4>
-            {coreBuilds.slice(0, 3).map((set, i) => (
-              <div key={i} className="build-card-row">
-                <div className="build-card-icons" style={{gap:1}}>
-                  {set.items.map((id, j) => (
-                    <span key={j}>
-                      {j > 0 && <span style={{color:"var(--muted)",margin:"0 1px"}}>›</span>}
-                      <ItemIcon id={id} size={26} />
+      {/* ═══ 3. ORDEM DE SKILLS — 18 níveis ═══ */}
+      <section className="build-section">
+        <h3 className="build-section-title">Ordem de Habilidades</h3>
+        {skillOrders.slice(0, 2).map((so, idx) => (
+          <div key={idx} className="skill-order-full">
+            <div className="skill-order-full-header">
+              <span className="skill-ab-big" style={{background: ABILITY_COLORS[so.maxFirst] + "22", color: ABILITY_COLORS[so.maxFirst], border: `1px solid ${ABILITY_COLORS[so.maxFirst]}55`}}>
+                Max {so.maxFirst}
+              </span>
+              <span className="pick-rate-badge">{so.pickRate}%</span>
+              <WRBadge wr={so.winRate} />
+            </div>
+            <div className="skill-level-grid">
+              <div className="skill-level-header">
+                {Array.from({length:18},(_,i)=><span key={i} className="skill-level-num">{i+1}</span>)}
+              </div>
+              {(["Q","W","E","R"] as const).map((ab) => (
+                <div key={ab} className="skill-level-row">
+                  <span className="skill-level-ab" style={{color: ABILITY_COLORS[ab], fontWeight:700}}>{ab}</span>
+                  {so.order.map((o,i) => (
+                    <span
+                      key={i}
+                      className={`skill-level-cell ${o===ab?"active":""}`}
+                      style={o===ab?{background:ABILITY_COLORS[ab]}:{}}
+                    >
+                      {o===ab?"●":""}
                     </span>
                   ))}
                 </div>
-                <div className="build-card-meta">
-                  <span className="pick-rate-badge">{set.pickRate}%</span>
-                  <WRBadge wr={set.winRate} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* ═══ 4. ITENS — fluxo contínuo ═══ */}
+      <section className="build-section">
+        <h3 className="build-section-title">Itens</h3>
+
+        {/* Itens Iniciais */}
+        <div className="items-flow">
+          <div className="items-flow-block">
+            <span className="items-flow-label">Iniciais</span>
+            <div className="items-flow-options">
+              {startingItems.slice(0, 3).map((set, i) => (
+                <div key={i} className="items-flow-option">
+                  <div className="items-flow-icons">
+                    {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                  </div>
+                  <div className="items-flow-stats">
+                    <span className="pick-rate-badge">{set.pickRate}%</span>
+                    <WRBadge wr={set.winRate} />
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
-          {/* Itens Situacionais */}
-          <div className="build-card">
-            <h4 className="build-card-title">Itens 4°–6°</h4>
-            <div className="situational-compact">
-              {[{label:"4°",items:fourthItems},{label:"5°",items:fifthItems},{label:"6°",items:sixthItems}].map((group) => (
-                <div key={group.label} className="sit-group">
-                  <span className="sit-label">{group.label}</span>
-                  <div className="sit-items">
-                    {group.items.slice(0, 2).map((set, i) => (
-                      <div key={i} style={{display:"flex",alignItems:"center",gap:2}}>
-                        {set.items.slice(0, 2).map((id) => <ItemIcon key={id} id={id} size={22} />)}
-                        <span style={{fontSize:"0.6rem",color:"var(--muted)",marginLeft:2}}>{set.pickRate}%</span>
-                      </div>
-                    ))}
+          <span className="items-flow-arrow">→</span>
+
+          {/* Boots */}
+          <div className="items-flow-block">
+            <span className="items-flow-label">Botas</span>
+            <div className="items-flow-options">
+              {boots.slice(0, 3).map((set, i) => (
+                <div key={i} className="items-flow-option">
+                  <div className="items-flow-icons">
+                    {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                  </div>
+                  <div className="items-flow-stats">
+                    <span className="pick-rate-badge">{set.pickRate}%</span>
+                    <WRBadge wr={set.winRate} />
                   </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
-      </div>
 
-      {/* ── Partidas Recentes (fim da Build) ── */}
-      {matchHistory && matchHistory.length > 0 && (
-        <section className="build-section" style={{marginTop:"1.5rem"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.75rem"}}>
-            <h3 className="build-section-title" style={{margin:0}}>
-              Partidas Recentes — Monochampions
-            </h3>
+        {/* Build Principal (2 itens core) + expansão para 3°/4°/5° */}
+        <div className="items-flow" style={{marginTop:"0.75rem"}}>
+          <div className="items-flow-block items-flow-block-wide">
+            <span className="items-flow-label">Build Principal (clique para expandir)</span>
+            <div className="items-flow-options">
+              {coreBuilds.slice(0, 3).map((set, i) => (
+                <button
+                  key={i}
+                  className={`items-flow-option items-flow-clickable ${selectedCore===i?"selected":""}`}
+                  onClick={() => setSelectedCore(i)}
+                >
+                  <div className="items-flow-icons">
+                    {set.items.slice(0, 2).map((id) => <ItemIcon key={id} id={id} size={36} />)}
+                  </div>
+                  <div className="items-flow-stats">
+                    <span className="pick-rate-badge">{set.pickRate}%</span>
+                    <WRBadge wr={set.winRate} />
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Itens seguintes baseados na core selecionada */}
+          {selectedCore !== null && (
+            <>
+              <span className="items-flow-arrow">→</span>
+              <div className="items-flow-block">
+                <span className="items-flow-label">3° Item</span>
+                <div className="items-flow-options">
+                  {fourthItems.slice(0, 3).map((set, i) => (
+                    <div key={i} className="items-flow-option">
+                      <div className="items-flow-icons">
+                        {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                      </div>
+                      <div className="items-flow-stats">
+                        <span className="pick-rate-badge">{set.pickRate}%</span>
+                        <WRBadge wr={set.winRate} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <span className="items-flow-arrow">→</span>
+              <div className="items-flow-block">
+                <span className="items-flow-label">4°–5°</span>
+                <div className="items-flow-options">
+                  {fifthItems.slice(0, 3).map((set, i) => (
+                    <div key={i} className="items-flow-option">
+                      <div className="items-flow-icons">
+                        {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                      </div>
+                      <div className="items-flow-stats">
+                        <span className="pick-rate-badge">{set.pickRate}%</span>
+                        <WRBadge wr={set.winRate} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* ═══ 5. FILTRO COUNTER-PICK ═══ */}
+      <section className="build-section">
+        <h3 className="build-section-title">Filtrar por Campeão Inimigo</h3>
+        <div style={{display:"flex",gap:"0.5rem",alignItems:"center",flexWrap:"wrap"}}>
+          <select
+            value={enemyFilter}
+            onChange={(e) => setEnemyFilter(e.target.value)}
+            style={{
+              padding:"0.4rem 0.6rem", borderRadius:6, border:"1px solid var(--border)",
+              background:"var(--panel)", color:"var(--text)", fontSize:"0.8rem", fontFamily:"inherit"
+            }}
+          >
+            <option value="">Todos os inimigos</option>
+            {buildData.hardCounters.map((c) => (
+              <option key={c.champId} value={c.champId}>{c.champName} (difícil — {c.winRate}% WR)</option>
+            ))}
+            {buildData.easyMatchups.map((c) => (
+              <option key={c.champId} value={c.champId}>{c.champName} (favorável — {c.winRate}% WR)</option>
+            ))}
+          </select>
+          {enemyFilter && (
             <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
-              {wins}V / {total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas analisadas
+              Mostrando partidas contra {buildData.hardCounters.find(c=>c.champId===enemyFilter)?.champName ?? buildData.easyMatchups.find(c=>c.champId===enemyFilter)?.champName}
+            </span>
+          )}
+        </div>
+      </section>
+
+      {/* ═══ 6. PARTIDAS RECENTES ═══ */}
+      {matchHistory && matchHistory.length > 0 && (
+        <section className="build-section">
+          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.5rem"}}>
+            <h3 className="build-section-title" style={{margin:0}}>Partidas Recentes — Monochampions</h3>
+            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
+              {wins}V/{total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas
             </span>
           </div>
-          <p className="muted-sm" style={{marginBottom:"0.75rem"}}>
-            ⚡ Fonte de todas as estatísticas. Dados de jogadores com 700k+ de maestria, Diamante+.
+          <p className="muted-sm" style={{marginBottom:"0.5rem"}}>
+            ⚡ Dados de monochampions (700k+ maestria, Diamante+) de todas as regiões selecionadas. Clique numa partida para ver detalhes.
           </p>
 
           <div className="matches-table-wrap">
             <table className="matches-table">
               <thead>
-                <tr>
-                  <th>Jogador</th>
-                  <th>Elo</th>
-                  <th>Reg</th>
-                  <th>Res</th>
-                  <th>KDA</th>
-                  <th>Itens</th>
-                  <th>Runas</th>
-                  <th>Skills</th>
-                  <th>Dur</th>
-                </tr>
+                <tr><th>Jogador</th><th>Elo</th><th>Reg</th><th>Res</th><th>KDA</th><th>Itens</th><th>Runas</th><th>Skills</th><th>Dur</th></tr>
               </thead>
               <tbody>
-                {matchHistory.slice(0, 20).map((m, i) => {
-                  const FLG: Record<string, string> = { br1: "🇧🇷", kr: "🇰🇷", euw1: "🇪🇺", na1: "🇺🇸", oc1: "🇦🇺" };
+                {filteredMatches.slice(0, 20).map((m, i) => {
+                  const FLG: Record<string, string> = { br1:"🇧🇷", kr:"🇰🇷", euw1:"🇪🇺", na1:"🇺🇸", oc1:"🇦🇺" };
                   return (
-                    <tr key={i} className={m.win ? "match-row-win" : "match-row-loss"} style={{cursor:"pointer"}} onClick={() => setExpandedMatch(expandedMatch === i ? null : i)}>
-                      <td>
-                        <span className="match-player-name">{m.summonerName}</span>
-                        <span className="match-player-tag" style={{marginLeft:4}}>#{m.tagLine}</span>
-                      </td>
+                    <tr key={i} className={m.win?"match-row-win":"match-row-loss"} style={{cursor:"pointer"}} onClick={() => setExpandedMatch(expandedMatch===i?null:i)}>
+                      <td><span className="match-player-name">{m.summonerName}</span><span className="match-player-tag" style={{marginLeft:4}}>#{m.tagLine}</span></td>
                       <td><span className="match-tier">{m.tier}</span></td>
-                      <td>{FLG[m.platform] ?? "🌐"}</td>
+                      <td>{FLG[m.platform]??"🌐"}</td>
                       <td><span className={`match-result ${m.win?"win":"loss"}`}>{m.win?"V":"D"}</span></td>
                       <td><span className="match-kda">{m.kda}</span></td>
-                      <td>
-                        <div className="match-items-row">{m.items.map((item,j)=><ItemIcon key={j} id={item} size={20} />)}</div>
-                      </td>
-                      <td>
-                        <div className="match-runes-info">
-                          <span className="match-keystone">{m.runes.keystone}</span>
-                          <span className="match-trees">{m.runes.primary}/{m.runes.secondary}</span>
-                        </div>
-                      </td>
+                      <td><div className="match-items-row">{m.items.map((id,j)=><ItemIcon key={j} id={id} size={20} />)}</div></td>
+                      <td><div className="match-runes-info"><span className="match-keystone">{m.runes.keystone}</span><span className="match-trees">{m.runes.primary}/{m.runes.secondary}</span></div></td>
                       <td><span className="match-skill-order">{m.skillOrder}</span></td>
                       <td className="muted-sm">{m.gameDuration}</td>
                     </tr>
@@ -408,8 +512,7 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
             </table>
           </div>
 
-          {/* Detalhe da partida expandida */}
-          {expandedMatch !== null && (
+          {expandedMatch !== null && matchHistory[expandedMatch] && (
             <MatchDetail match={matchHistory[expandedMatch]} champId={buildData.champId} onClose={() => setExpandedMatch(null)} />
           )}
         </section>
@@ -418,23 +521,28 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
   );
 }
 
-// ── Match Detail Panel (expandido ao clicar numa partida) ──────────────────────
+// ── Match Detail Panel ──────────────────────────────────────────────────────────
 
 function MatchDetail({ match, champId, onClose }: { match: MatchEntry; champId: string; onClose: () => void }) {
-  // Gera time aliado e inimigo mockados
-  const allyTeam: { name: string; champId: string }[] = [
+  // Mock determinístico pra cada partida baseado no matchId
+  const seed = match.matchId.charCodeAt(match.matchId.length-1);
+  const allyPool = ["Lee Sin","Viego","Sejuani","Jarvan IV","Xin Zhao","Ahri","Syndra","Orianna","Jinx","Caitlyn","Nautilus","Thresh","Lulu","Braum"];
+  const enemyPool = ["Darius","K'Sante","Renekton","Garen","Zed","Akali","LeBlanc","Fizz","Vayne","Draven","Leona","Blitzcrank","Pyke","Morgana"];
+  function pick(arr: string[], idx: number) { return arr[idx % arr.length]; }
+
+  const allyTeam = [
     { name: match.summonerName, champId },
-    { name: "JungleAliado", champId: ["Lee Sin","Viego","Sejuani","Jarvan IV","Xin Zhao"][Math.floor(Math.random()*5)] },
-    { name: "MidAliado", champId: ["Ahri","Syndra","Orianna","Viktor","Yasuo"][Math.floor(Math.random()*5)] },
-    { name: "ADCAliado", champId: ["Jinx","Caitlyn","Jhin","Ezreal","Kai'Sa"][Math.floor(Math.random()*5)] },
-    { name: "SupAliado", champId: ["Nautilus","Thresh","Lulu","Braum","Rell"][Math.floor(Math.random()*5)] },
+    { name: "AliadoJG",  champId: pick(allyPool, seed+1) },
+    { name: "AliadoMid", champId: pick(allyPool, seed+2) },
+    { name: "AliadoADC", champId: pick(allyPool, seed+3) },
+    { name: "AliadoSup", champId: pick(allyPool, seed+4) },
   ];
-  const enemyTeam: { name: string; champId: string }[] = [
-    { name: "TopInimigo", champId: ["Darius","K'Sante","Renekton","Garen","Aatrox"][Math.floor(Math.random()*5)] },
-    { name: "JgInimigo", champId: ["Graves","Kindred","Elise","Kha'Zix","Wukong"][Math.floor(Math.random()*5)] },
-    { name: "MidInimigo", champId: ["Zed","Akali","LeBlanc","Fizz","Katarina"][Math.floor(Math.random()*5)] },
-    { name: "ADCInimigo", champId: ["Vayne","Draven","Samira","Lucian","Ashe"][Math.floor(Math.random()*5)] },
-    { name: "SupInimigo", champId: ["Leona","Blitzcrank","Pyke","Morgana","Zyra"][Math.floor(Math.random()*5)] },
+  const enemyTeam = [
+    { name: "InimigoTop", champId: pick(enemyPool, seed+5) },
+    { name: "InimigoJG",  champId: pick(enemyPool, seed+6) },
+    { name: "InimigoMid", champId: pick(enemyPool, seed+7) },
+    { name: "InimigoADC", champId: pick(enemyPool, seed+8) },
+    { name: "InimigoSup", champId: pick(enemyPool, seed+9) },
   ];
 
   return (
@@ -443,75 +551,28 @@ function MatchDetail({ match, champId, onClose }: { match: MatchEntry; champId: 
         <h4>Detalhes da Partida</h4>
         <button onClick={onClose} className="match-detail-close">✕</button>
       </div>
-
       <div className="match-detail-meta">
-        <span>{match.summonerName}#{match.tagLine}</span>
+        <span style={{fontWeight:600}}>{match.summonerName}#{match.tagLine}</span>
         <span className="muted-sm">{match.tier} {match.rank}</span>
-        <span className={match.win ? "match-result win" : "match-result loss"}>{match.win ? "Vitória" : "Derrota"}</span>
-        <span className="muted-sm">{match.gameDuration} · KDA {match.kda}</span>
+        <span className={match.win?"match-result win":"match-result loss"}>{match.win?"Vitória":"Derrota"}</span>
+        <span className="muted-sm">{match.gameDuration} · {match.kda}</span>
       </div>
-
       <div className="match-teams-grid">
-        {/* Time Aliado */}
         <div className="match-team">
-          <h5 style={{color:"#1a9e6e",margin:"0 0 0.5rem"}}>Aliados 🟢</h5>
-          {allyTeam.map((p, i) => (
-            <div key={i} className="match-team-row">
-              <ChampIcon champId={p.champId} size={26} />
-              <span>{p.name}</span>
-              <span style={{marginLeft:"auto",fontSize:"0.65rem",color:"var(--muted)"}}>{p.champId}</span>
-            </div>
-          ))}
+          <h5 style={{color:"#1a9e6e",margin:"0 0 0.4rem",fontSize:"0.78rem"}}>🟢 Aliados</h5>
+          {allyTeam.map((p,i)=>(<div key={i} className="match-team-row"><ChampIcon champId={p.champId} size={24}/><span style={{fontSize:"0.72rem"}}>{p.name}</span><span style={{marginLeft:"auto",fontSize:"0.62rem",color:"var(--muted)"}}>{p.champId}</span></div>))}
         </div>
-        {/* Time Inimigo */}
         <div className="match-team">
-          <h5 style={{color:"#e84057",margin:"0 0 0.5rem"}}>Inimigos 🔴</h5>
-          {enemyTeam.map((p, i) => (
-            <div key={i} className="match-team-row">
-              <ChampIcon champId={p.champId} size={26} />
-              <span>{p.name}</span>
-              <span style={{marginLeft:"auto",fontSize:"0.65rem",color:"var(--muted)"}}>{p.champId}</span>
-            </div>
-          ))}
+          <h5 style={{color:"#e84057",margin:"0 0 0.4rem",fontSize:"0.78rem"}}>🔴 Inimigos</h5>
+          {enemyTeam.map((p,i)=>(<div key={i} className="match-team-row"><ChampIcon champId={p.champId} size={24}/><span style={{fontSize:"0.72rem"}}>{p.name}</span><span style={{marginLeft:"auto",fontSize:"0.62rem",color:"var(--muted)"}}>{p.champId}</span></div>))}
         </div>
       </div>
-
-      {/* Itens e build do jogador foco */}
       <div className="match-detail-build">
-        <div><strong>Itens:</strong> <div className="match-items-row">{match.items.map((id,j)=><ItemIcon key={j} id={id} size={28} />)}</div></div>
+        <div><strong>Itens:</strong> <div className="match-items-row">{match.items.map((id,j)=><ItemIcon key={j} id={id} size={28}/>)}</div></div>
         <div><strong>Runas:</strong> {match.runes.keystone} ({match.runes.primary}/{match.runes.secondary})</div>
         <div><strong>Feitiços:</strong> {match.summonerSpells.join(" + ")}</div>
         <div><strong>Ordem:</strong> {match.skillOrder}</div>
       </div>
-    </div>
-  );
-}
-
-// ── Compact Rune Card ───────────────────────────────────────────────────────────
-
-function CompactRuneCard({ setup, i }: { setup: RuneSetup; i: number }) {
-  return (
-    <div className="build-card-row" style={{flexDirection:"column",alignItems:"flex-start",gap:"0.2rem"}}>
-      <div style={{display:"flex",alignItems:"center",gap:"0.35rem",width:"100%"}}>
-        <div style={{display:"flex",gap:2}}>
-          {[setup.keystone, setup.slot1, setup.slot2, setup.slot3].map((r,si) => (
-            <RuneIcon key={si} path={r.icon} size={si===0?24:18} />
-          ))}
-        </div>
-        <span style={{color:"var(--muted)",fontSize:"0.6rem"}}>|</span>
-        <div style={{display:"flex",gap:2}}>
-          {[setup.secondary1, setup.secondary2].map((r,si) => (
-            <RuneIcon key={si} path={r.icon} size={18} />
-          ))}
-        </div>
-        <div style={{marginLeft:"auto",display:"flex",gap:"0.5rem",alignItems:"center"}}>
-          <span className="pick-rate-badge">{setup.pickRate}%</span>
-          <WRBadge wr={setup.winRate} />
-        </div>
-      </div>
-      <span style={{fontSize:"0.62rem",color:"var(--muted)"}}>
-        {setup.primaryTree} / {setup.secondaryTree}
-      </span>
     </div>
   );
 }

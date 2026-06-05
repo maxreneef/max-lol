@@ -526,16 +526,16 @@ export function generateChampionBuildData(champ: DDChampion, allChampions: DDCha
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ONE_TRICK_PLAYERS: { name: string; tag: string; region: string; platform: string; tier: string; rank: string }[] = [
-  { name: "KierDock",        tag: "13116", region: "Brasil",           platform: "br1", tier: "Diamante",    rank: "II" },
-  { name: "LucasRei",        tag: "BR1",   region: "Brasil",           platform: "br1", tier: "Mestre",      rank: "I" },
-  { name: "JooJoo",          tag: "777",   region: "Brasil",           platform: "br1", tier: "Challenger",  rank: "800 LP" },
-  { name: "Hide on bush",    tag: "KR1",   region: "Coreia do Sul",    platform: "kr",  tier: "Challenger",  rank: "1200 LP" },
-  { name: "MidBeast",        tag: "OCE",   region: "Oceania",          platform: "oc1", tier: "Grão-Mestre", rank: "I" },
-  { name: "Quantum",         tag: "NA1",   region: "América do Norte", platform: "na1", tier: "Challenger",  rank: "900 LP" },
-  { name: "Noway4u",         tag: "EUW",   region: "Europa Oeste",     platform: "euw1", tier: "Desafiante", rank: "I" },
-  { name: "Pobelter",        tag: "NA",    region: "América do Norte", platform: "na1", tier: "Challenger",  rank: "700 LP" },
-  { name: "BaianoSensei",    tag: "BR",    region: "Brasil",           platform: "br1", tier: "Mestre",      rank: "III" },
-  { name: "Yoda",            tag: "KR2",   region: "Coreia do Sul",    platform: "kr",  tier: "Challenger",  rank: "1000 LP" },
+  { name: "N1ghtM4re",       tag: "1337", region: "Brasil",           platform: "br1", tier: "Diamante",    rank: "II" },
+  { name: "StormFury",       tag: "BR1",  region: "Brasil",           platform: "br1", tier: "Mestre",      rank: "I" },
+  { name: "ShadowBR",        tag: "777",  region: "Brasil",           platform: "br1", tier: "Challenger",  rank: "800 LP" },
+  { name: "KRGod",           tag: "KR1",  region: "Coreia do Sul",    platform: "kr",  tier: "Challenger",  rank: "1200 LP" },
+  { name: "OceanMaster",     tag: "OCE",  region: "Oceania",          platform: "oc1", tier: "Grão-Mestre", rank: "I" },
+  { name: "NAElite",         tag: "NA1",  region: "América do Norte", platform: "na1", tier: "Challenger",  rank: "900 LP" },
+  { name: "EUWLegend",       tag: "EUW",  region: "Europa Oeste",     platform: "euw1", tier: "Desafiante", rank: "I" },
+  { name: "ProdigyNA",       tag: "NA",   region: "América do Norte", platform: "na1", tier: "Challenger",  rank: "700 LP" },
+  { name: "TempestadeBR",    tag: "BR",   region: "Brasil",           platform: "br1", tier: "Mestre",      rank: "III" },
+  { name: "SeoulKing",       tag: "KR2",  region: "Coreia do Sul",    platform: "kr",  tier: "Challenger",  rank: "1000 LP" },
 ];
 
 function randomItem(items: string[]): string {

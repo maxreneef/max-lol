@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { CookieConsent } from "@/components/CookieConsent";
 import { SupportButton } from "@/components/SupportButton";
 import { AdStickyBottom } from "@/components/AdUnit";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -61,6 +62,7 @@ export default function RootLayout({
               Max<span> LoL</span>
             </Link>
             <NavMenu />
+            <GlobalSearch />
             <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
               <Link href="/suporte" className="support-nav-link" title="Apoiar o Max LoL">
                 ☕ Apoiar
