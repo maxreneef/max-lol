@@ -16,6 +16,7 @@ import type {
 } from "@/lib/mockChampData";
 import { SUMMONER_SPELL_IDS, RUNE_STYLE_IDS, BOOTS_IDS } from "@/lib/riotIds";
 import type { AggregatedBuildData } from "@/lib/buildAggregator";
+import { PLATFORMS } from "@/lib/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -230,7 +231,10 @@ function formatRunes(
   return <><span className="match-keystone">{String(r.keystone ?? "")}</span><span className="match-trees">{String(r.primary ?? "")}/{String(r.secondary ?? "")}</span></>;
 }
 
-function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string }) {
+function BuildTab({ buildData, detail, ddBase, region, lane }: {
+  buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string;
+  region: string; lane: string;
+}) {
   const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory: mockHistory } = buildData;
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [selectedCore, setSelectedCore] = useState(0);
@@ -241,17 +245,22 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
   const [loadingBuild, setLoadingBuild] = useState(false);
   const [runeMap, setRuneMap] = useState<Map<number, { name: string; icon: string }>>(new Map());
 
+  // Monta query params para a API (região real + filtro de rota)
+  const apiLane = lane.toLowerCase() === "todas" ? "" : lane.toLowerCase();
+
   // Busca partidas REAIS da Riot API
   useEffect(() => {
     let cancelled = false;
     async function fetchReal() {
       setLoadingMatches(true);
       try {
-        const res = await fetch(`/api/champion/${buildData.champId}/matches?region=br1`);
+        const laneParam = apiLane ? `&lane=${encodeURIComponent(apiLane)}` : "";
+        const res = await fetch(
+          `/api/champion/${buildData.champId}/matches?region=${region}${laneParam}`
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data.matches?.length > 0) {
-          // Converte o formato da API pro MatchEntry
           setRealMatches(data.matches.map((m: Record<string, unknown>) => ({
             matchId: m.matchId as string,
             summonerName: m.summonerName as string,
@@ -273,7 +282,6 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
             gameDuration: m.gameDuration as string,
             gameCreation: m.gameCreation as number,
             queueId: m.queueId as number,
-            // Novos campos
             csPerMin: (m.csPerMin as number) ?? 0,
             killParticipation: (m.killParticipation as number) ?? 0,
             cs: (m.cs as number) ?? 0,
@@ -284,7 +292,7 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
     }
     fetchReal();
     return () => { cancelled = true; };
-  }, [buildData.champId]);
+  }, [buildData.champId, region, apiLane]);
 
   // Busca dados AGREGADOS de build (runas, itens, feitiços com WR real)
   useEffect(() => {
@@ -292,7 +300,10 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
     async function fetchBuild() {
       setLoadingBuild(true);
       try {
-        const res = await fetch(`/api/champion/${buildData.champId}/build?region=br1`);
+        const laneParam = apiLane ? `&lane=${encodeURIComponent(apiLane)}` : "";
+        const res = await fetch(
+          `/api/champion/${buildData.champId}/build?region=${region}${laneParam}`
+        );
         if (!res.ok) return;
         const data = await res.json();
         if (!cancelled && data.hasRealData) {
@@ -303,7 +314,7 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
     }
     fetchBuild();
     return () => { cancelled = true; };
-  }, [buildData.champId]);
+  }, [buildData.champId, region, apiLane]);
 
   // Busca dados de runas do Data Dragon (cache no client via state)
   useEffect(() => {
@@ -833,7 +844,15 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
                           ? <span style={{fontSize:"0.7rem",padding:"0.1rem 0.35rem",borderRadius:4,background:"var(--panel)",border:"1px solid var(--border)"}}>{mExt.killParticipation}%</span>
                           : <span className="muted-sm">—</span>}
                       </td>
-                      <td><div className="match-items-row">{m.items.map((id,j)=><ItemIcon key={j} id={id} size={20} />)}</div></td>
+                      <td>
+                        <div className="match-items-row">
+                          {m.items.slice(0, 6).map((id, j) =>
+                            id === "0" || !id
+                              ? <div key={j} className="item-slot-empty" style={{width:20,height:20,borderRadius:3,background:"var(--panel)",border:"1px solid var(--border)"}} />
+                              : <ItemIcon key={j} id={id} size={20} />
+                          )}
+                        </div>
+                      </td>
                       <td><div className="match-runes-info">{formatRunes(m.runes, runeMap, isRealData)}</div></td>
                       <td><span className="match-skill-order">{m.skillOrder}</span></td>
                       <td className="muted-sm">{m.gameDuration}</td>
@@ -1207,6 +1226,14 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
   const urlLane = searchParams.get("lane") ?? "Todas";
   const [lane, setLane] = useState(urlLane);
 
+  // Região primária para chamadas à Riot API (primeiro servidor selecionado no filtro)
+  const primaryRegion = useMemo(() => {
+    const raw = searchParams.get("regions") ?? "all";
+    if (raw === "all" || raw === "none") return "br1";
+    const regions = raw.split(",").filter((r) => r in PLATFORMS);
+    return regions[0] ?? "br1";
+  }, [searchParams]);
+
   function handleLaneChange(l: string) {
     setLane(l);
     const params = new URLSearchParams(searchParams.toString());
@@ -1246,7 +1273,7 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
 
         {/* Tab content */}
         <div className="champ-tab-content">
-          {normalizedTab === "Build" && <BuildTab buildData={buildData} detail={detail} ddBase={ddBase} />}
+          {normalizedTab === "Build" && <BuildTab buildData={buildData} detail={detail} ddBase={ddBase} region={primaryRegion} lane={lane} />}
           {normalizedTab === "Counters" && <CountersTab buildData={buildData} champName={champ.name} />}
           {normalizedTab === "One Tricks" && <OneTricksTab buildData={buildData} />}
           {normalizedTab === "Pro Builds" && <ProBuildsTab champName={champ.name} />}

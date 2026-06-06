@@ -11,6 +11,7 @@ export async function GET(
 ) {
   const { champId } = await params;
   const region = req.nextUrl.searchParams.get("region") ?? "br1";
+  const lane   = req.nextUrl.searchParams.get("lane")   ?? "";
 
   if (!isPlatform(region)) {
     return NextResponse.json({ error: "Região inválida" }, { status: 400 });
@@ -23,14 +24,19 @@ export async function GET(
     });
   }
 
-  const cacheKey = `champion-build:${champId}:${region}`;
+  // Cache keyed por região + rota
+  const cacheKey = `champion-build-v2:${champId}:${region}:${lane}`;
 
   try {
     const data = await cached(cacheKey, 10 * 60 * 1000, async () => {
-      // Chama a rota de matches internamente para obter partidas reais
       const host = req.headers.get("host") ?? "localhost:3000";
       const protocol = host.includes("localhost") ? "http" : "https";
-      const matchesUrl = `${protocol}://${host}/api/champion/${encodeURIComponent(champId)}/matches?region=${encodeURIComponent(region)}`;
+
+      // Repassa lane para a rota de matches
+      const laneParam = lane ? `&lane=${encodeURIComponent(lane)}` : "";
+      const matchesUrl =
+        `${protocol}://${host}/api/champion/${encodeURIComponent(champId)}/matches` +
+        `?region=${encodeURIComponent(region)}${laneParam}`;
 
       const matchesRes = await fetch(matchesUrl, {
         headers: { cookie: req.headers.get("cookie") ?? "" },
@@ -45,11 +51,7 @@ export async function GET(
       const matches = matchesData.matches ?? [];
 
       if (matches.length === 0) {
-        return {
-          message: "Nenhuma partida encontrada",
-          hasRealData: false,
-          totalGames: 0,
-        };
+        return { message: "Nenhuma partida encontrada", hasRealData: false, totalGames: 0 };
       }
 
       const aggregated = aggregateBuildData(matches);
