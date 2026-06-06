@@ -149,7 +149,8 @@ interface CountEntry {
 function aggregateByKey<T>(
   matches: RealMatch[],
   keyFn: (m: RealMatch) => string | null,
-  mapFn: (key: string, entry: CountEntry) => T
+  mapFn: (key: string, entry: CountEntry) => T,
+  minCount = 2
 ): T[] {
   const map = new Map<string, CountEntry>();
 
@@ -165,7 +166,7 @@ function aggregateByKey<T>(
   const total = matches.length;
   const results: T[] = [];
   for (const [key, entry] of map) {
-    if (entry.count < 2) continue; // filtrar ruído
+    if (entry.count < minCount) continue;
     results.push(
       mapFn(key, {
         wins: entry.wins,
@@ -187,6 +188,8 @@ function aggregateByKey<T>(
 export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
   const total = matches.length;
   const wins = matches.filter((m) => m.win).length;
+  // Amostras pequenas: mostrar tudo com count >= 1; amostras grandes: filtrar ruído (count < 2)
+  const minCount = total < 10 ? 1 : 2;
 
   if (total === 0) {
     return {
@@ -211,8 +214,7 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
     matches,
     (m) => {
       if (!m.spell1Id || !m.spell2Id) return null;
-      // Ordenar para consistência (Flash sempre primeiro se presente)
-      const ids = [m.spell1Id, m.spell2Id].sort((a, b) => b - a); // Flash=4 fica antes
+      const ids = [m.spell1Id, m.spell2Id].sort((a, b) => b - a);
       return `${ids[0]}:${ids[1]}`;
     },
     (key, entry) => {
@@ -224,7 +226,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
         winRate: +((entry.wins / entry.count) * 100).toFixed(1),
         count: entry.count,
       };
-    }
+    },
+    minCount
   );
 
   // ── Keystones (primaryRuneId) ──
@@ -236,7 +239,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
       pickRate: +((entry.count / total) * 100).toFixed(1),
       winRate: +((entry.wins / entry.count) * 100).toFixed(1),
       count: entry.count,
-    })
+    }),
+    minCount
   );
 
   // ── Árvores primárias (primaryStyle) ──
@@ -248,7 +252,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
       pickRate: +((entry.count / total) * 100).toFixed(1),
       winRate: +((entry.wins / entry.count) * 100).toFixed(1),
       count: entry.count,
-    })
+    }),
+    minCount
   );
 
   // ── Árvores secundárias (subStyle) ──
@@ -260,7 +265,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
       pickRate: +((entry.count / total) * 100).toFixed(1),
       winRate: +((entry.wins / entry.count) * 100).toFixed(1),
       count: entry.count,
-    })
+    }),
+    minCount
   );
 
   // ── Itens core (pares dos 2 primeiros itens não-bota, não-inicial) ──
@@ -269,7 +275,7 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
     (m) => {
       const core = getCoreItems(m).slice(0, 2);
       if (core.length === 0) return null;
-      core.sort((a, b) => a - b); // ordenar pra consistência
+      core.sort((a, b) => a - b);
       return core.join(":");
     },
     (key, entry) => {
@@ -280,7 +286,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
         winRate: +((entry.wins / entry.count) * 100).toFixed(1),
         count: entry.count,
       };
-    }
+    },
+    minCount
   );
 
   // ── Itens iniciais ──
@@ -300,7 +307,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
         winRate: +((entry.wins / entry.count) * 100).toFixed(1),
         count: entry.count,
       };
-    }
+    },
+    minCount
   );
 
   // ── Slots primários (índices 1-3 de runeSelections) ──
@@ -353,7 +361,8 @@ export function aggregateBuildData(matches: RealMatch[]): AggregatedBuildData {
       pickRate: +((entry.count / total) * 100).toFixed(1),
       winRate: +((entry.wins / entry.count) * 100).toFixed(1),
       count: entry.count,
-    })
+    }),
+    minCount
   );
 
   return {
