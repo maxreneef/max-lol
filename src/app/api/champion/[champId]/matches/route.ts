@@ -4,14 +4,23 @@ import { cached } from "@/lib/cache";
 
 const API_KEY = process.env.RIOT_API_KEY;
 
-// Mapeia label da UI para teamPosition da Riot API
+// Mapeia label da UI → teamPosition da Riot API
 const LANE_MAP: Record<string, string> = {
-  top: "TOP",
-  jungle: "JUNGLE",
-  mid: "MIDDLE",
-  adc: "BOTTOM",
+  top:     "TOP",
+  jungle:  "JUNGLE",
+  mid:     "MIDDLE",
+  adc:     "BOTTOM",
   suporte: "UTILITY",
 };
+
+// Prioridade de tier para ordenação (menor = melhor)
+const TIER_ORDER: Record<string, number> = {
+  CHALLENGER:  0,
+  GRANDMASTER: 1,
+  MASTER:      2,
+  DIAMOND:     3,
+};
+const DIV_ORDER: Record<string, number> = { I: 0, II: 1, III: 2, IV: 3 };
 
 export async function GET(
   req: NextRequest,
@@ -28,8 +37,8 @@ export async function GET(
     return NextResponse.json({ matches: [], total: 0, message: "API Key não configurada" });
   }
 
-  // Cache separado por região + rota — versão v4 (lane filter + timeline + 6 slots)
-  const cacheKey = `champion-matches-v4:${champId}:${region}:${lane}`;
+  // v5: inclui Diamond + sort por tier
+  const cacheKey = `champion-matches-v5:${champId}:${region}:${lane}`;
 
   try {
     const data = await cached(cacheKey, 30 * 60 * 1000, () =>
@@ -68,6 +77,15 @@ async function getChampionNumericId(champName: string): Promise<number | null> {
 
 // ── Rota principal ────────────────────────────────────────────────────────────
 
+type Player = { puuid: string; tier: string; rank: string; lp: number };
+
+/** Ordem de busca: Challenger > GM > Master > D1 > D2 > D3 > D4 */
+function playerSortKey(p: Player): number {
+  const t = (TIER_ORDER[p.tier.toUpperCase()] ?? 99) * 10_000;
+  const d = (DIV_ORDER[p.rank]             ?? 0)  *  1_000;
+  return t + d - p.lp; // menor = mais prioritário
+}
+
 async function fetchRealMatches(champId: string, platform: string, lane: string) {
   const p = PLATFORMS[platform as keyof typeof PLATFORMS];
   const platHost = `https://${platform}.api.riotgames.com`;
@@ -78,44 +96,100 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
     return { matches: [], total: 0, message: `Campeão ${champId} não encontrado no DDragon` };
   }
 
-  // Challenger + Grandmaster + Master (Diamond 4 → Challenger coberto)
-  const tiers = ["challengerleagues", "grandmasterleagues", "masterleagues"];
-  const allPlayers: { puuid: string; tier: string; lp: number; rank: string }[] = [];
+  const allPlayers: Player[] = [];
 
-  for (const tier of tiers) {
-    try {
-      const res = await riotFetch(`${platHost}/lol/league/v4/${tier}/by-queue/RANKED_SOLO_5x5`);
-      if (!res.ok) continue;
-      const data = await res.json();
-      for (const entry of data.entries ?? []) {
-        if (!entry.puuid) continue;
-        allPlayers.push({
-          puuid: entry.puuid,
-          tier:  data.tier  ?? "CHALLENGER",
-          lp:    entry.leaguePoints ?? 0,
-          rank:  entry.rank ?? "I",
-        });
+  // ── 1. Apex tiers (uma chamada cada, retorna todos os jogadores com puuid) ──
+  const apexTiers = [
+    { endpoint: "challengerleagues", tier: "CHALLENGER" },
+    { endpoint: "grandmasterleagues", tier: "GRANDMASTER" },
+    { endpoint: "masterleagues", tier: "MASTER" },
+  ];
+
+  const apexResults = await Promise.all(
+    apexTiers.map(async ({ endpoint, tier }) => {
+      try {
+        const res = await riotFetch(
+          `${platHost}/lol/league/v4/${endpoint}/by-queue/RANKED_SOLO_5x5`
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        const players: Player[] = [];
+        for (const entry of data.entries ?? []) {
+          if (!entry.puuid) continue;
+          players.push({
+            puuid: entry.puuid,
+            tier,
+            lp:   entry.leaguePoints ?? 0,
+            rank: entry.rank ?? "I",
+          });
+        }
+        return players;
+      } catch {
+        return [];
       }
-    } catch { continue; }
-  }
+    })
+  );
+  for (const batch of apexResults) allPlayers.push(...batch);
+
+  await sleep(250); // respeita rate limit após 3 chamadas paralelas
+
+  // ── 2. Diamond D1–D4 via endpoint paginado /entries ──
+  //    Busca 2 páginas do D1 e 1 página de D2, D3, D4 em paralelo
+  const diamondRequests: Array<{ div: string; page: number }> = [
+    { div: "I", page: 1 }, { div: "I", page: 2 },
+    { div: "II",  page: 1 },
+    { div: "III", page: 1 },
+    { div: "IV",  page: 1 },
+  ];
+
+  const diamondResults = await Promise.all(
+    diamondRequests.map(async ({ div, page }) => {
+      try {
+        const res = await riotFetch(
+          `${platHost}/lol/league/v4/entries/RANKED_SOLO_5x5/DIAMOND/${div}?page=${page}`
+        );
+        if (!res.ok) return [];
+        const entries: Array<{ puuid?: string; leaguePoints?: number }> = await res.json();
+        if (!Array.isArray(entries) || entries.length === 0) return [];
+        return entries
+          .filter((e) => !!e.puuid)
+          .map((e) => ({
+            puuid: e.puuid!,
+            tier: "DIAMOND",
+            lp:   e.leaguePoints ?? 0,
+            rank: div,           // I, II, III, IV
+          } satisfies Player));
+      } catch {
+        return [];
+      }
+    })
+  );
+  for (const batch of diamondResults) allPlayers.push(...batch);
 
   if (allPlayers.length === 0) {
     return { matches: [], total: 0, message: "Leaderboard vazio — verifique a API Key" };
   }
 
-  const top100 = allPlayers.sort((a, b) => b.lp - a.lp).slice(0, 100);
+  // ── 3. Ordena: Challenger > GM > Master > D1 > D2 > D3 > D4, depois por LP ──
+  const sorted = allPlayers
+    .sort((a, b) => playerSortKey(a) - playerSortKey(b))
+    .slice(0, 300); // pool ampliado para cobrir Diamond
 
-  // Últimos 30 dias (startTime em segundos Unix)
+  // ── 4. Últimos 30 dias ──
   const startTime = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
 
-  type MatchCandidate = { matchId: string; puuid: string; tier: string; rank: string; lp: number };
+  // Converte filtro de rota
+  const laneFilter = lane ? (LANE_MAP[lane.toLowerCase()] ?? "") : "";
+
+  type MatchCandidate = Player & { matchId: string };
   const champMatchIds: MatchCandidate[] = [];
   const TARGET = 10;
-  const BATCH = 5;
+  const BATCH  = 5;
 
-  for (let i = 0; i < top100.length; i += BATCH) {
+  // ── 5. Busca match IDs filtrados pelo campeão ──
+  for (let i = 0; i < sorted.length; i += BATCH) {
     if (champMatchIds.length >= TARGET) break;
-    const batch = top100.slice(i, i + BATCH);
+    const batch = sorted.slice(i, i + BATCH);
 
     const results = await Promise.all(
       batch.map(async (player) => {
@@ -132,7 +206,6 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
         }
       })
     );
-
     for (const r of results) champMatchIds.push(...r);
     await sleep(250);
   }
@@ -141,25 +214,23 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
     return {
       matches: [],
       total: 0,
-      message: `Nenhum jogo de ${champId} nos últimos 30 dias no Challenger/GM/Master de ${platform}`,
+      message: `Nenhum jogo de ${champId} nos últimos 30 dias no Diamond–Challenger de ${platform}`,
     };
   }
 
+  // Deduplica
   const seenIds = new Set<string>();
-  const uniqueCandidates = champMatchIds.filter((m) => {
+  const unique = champMatchIds.filter((m) => {
     if (seenIds.has(m.matchId)) return false;
     seenIds.add(m.matchId);
     return true;
   }).slice(0, TARGET);
 
-  // Lane filter: converte label da UI para teamPosition da API
-  const laneFilter = lane ? (LANE_MAP[lane.toLowerCase()] ?? "") : "";
-
-  // Detalhe das partidas
+  // ── 6. Detalhe das partidas ──
   const matches: Record<string, unknown>[] = [];
 
-  for (let i = 0; i < uniqueCandidates.length; i += 5) {
-    const batch = uniqueCandidates.slice(i, i + 5);
+  for (let i = 0; i < unique.length; i += 5) {
+    const batch = unique.slice(i, i + 5);
 
     const results = await Promise.all(
       batch.map(async (candidate) => {
@@ -176,7 +247,7 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
           );
           if (!part) return null;
 
-          // Filtro de rota real: teamPosition da Riot API
+          // Filtro de rota real
           const teamPosition: string = part.teamPosition ?? part.individualPosition ?? "";
           if (laneFilter && teamPosition !== laneFilter) return null;
 
@@ -186,25 +257,22 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
           const primaryStyle  = part.perks?.styles?.[0]?.style ?? 0;
           const subStyle      = part.perks?.styles?.[1]?.style ?? 0;
           const primaryRuneId = part.perks?.styles?.[0]?.selections?.[0]?.perk ?? 0;
-
-          const runeSelections: number[] =
-            (part.perks?.styles?.[0]?.selections ?? []).map(
-              (s: { perk: number }) => s.perk
-            );
-          const subSelections: number[] =
-            (part.perks?.styles?.[1]?.selections ?? []).map(
-              (s: { perk: number }) => s.perk
-            );
-          const statShards: number[] = Object.values(
-            part.perks?.statPerks ?? {}
-          ).filter((v): v is number => typeof v === "number");
+          const runeSelections: number[] = (part.perks?.styles?.[0]?.selections ?? []).map(
+            (s: { perk: number }) => s.perk
+          );
+          const subSelections: number[] = (part.perks?.styles?.[1]?.selections ?? []).map(
+            (s: { perk: number }) => s.perk
+          );
+          const statShards: number[] = Object.values(part.perks?.statPerks ?? {}).filter(
+            (v): v is number => typeof v === "number"
+          );
 
           const spell1Id = part.summoner1Id ?? 0;
           const spell2Id = part.summoner2Id ?? 0;
 
-          const dur = info.gameDuration ?? 0;
-          const mm  = Math.floor(dur / 60);
-          const ss  = dur % 60;
+          const dur  = info.gameDuration ?? 0;
+          const mm   = Math.floor(dur / 60);
+          const ss   = dur % 60;
 
           const totalMinionsKilled   = part.totalMinionsKilled   ?? 0;
           const neutralMinionsKilled = part.neutralMinionsKilled ?? 0;
@@ -215,13 +283,12 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
           const teamKills = info.participants
             .filter((pp: { teamId: number }) => pp.teamId === teamId)
             .reduce((sum: number, pp: { kills: number }) => sum + (pp.kills ?? 0), 0);
-
           const killParticipation =
             teamKills > 0
               ? Math.round(((part.kills ?? 0) + (part.assists ?? 0)) / teamKills * 100)
               : 0;
 
-          // 6 slots de itens principais (0–5); slot 6 é ward/trindade
+          // 6 slots de itens (0–5); slot 6 = ward/trindade (excluído da tabela)
           const items = [
             String(part.item0 ?? 0), String(part.item1 ?? 0),
             String(part.item2 ?? 0), String(part.item3 ?? 0),
@@ -229,25 +296,24 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
           ];
 
           return {
-            matchId:   candidate.matchId,
-            // puuid guardado temporariamente para buscar timeline depois
-            _champPuuid: part.puuid ?? "",
+            matchId:      candidate.matchId,
+            _champPuuid:  part.puuid ?? "",   // removido antes de retornar
             summonerName: riotName || "Invocador",
-            tagLine:   riotTag,
-            tier:      candidate.tier  || "CHALLENGER",
-            rank:      candidate.rank  || "I",
-            lp:        candidate.lp    || 0,
-            championId: part.championName ?? champId,
-            win:    part.win,
-            kills:  part.kills   ?? 0,
-            deaths: part.deaths  ?? 0,
-            assists: part.assists ?? 0,
-            kda:    `${part.kills ?? 0}/${part.deaths ?? 0}/${part.assists ?? 0}`,
+            tagLine:      riotTag,
+            tier:         candidate.tier  || "DIAMOND",
+            rank:         candidate.rank  || "IV",
+            lp:           candidate.lp    || 0,
+            championId:   part.championName ?? champId,
+            win:          part.win,
+            kills:        part.kills   ?? 0,
+            deaths:       part.deaths  ?? 0,
+            assists:      part.assists ?? 0,
+            kda:          `${part.kills ?? 0}/${part.deaths ?? 0}/${part.assists ?? 0}`,
             items,
             runes: {
-              primary:    primaryStyle ? String(primaryStyle) : "",
-              secondary:  subStyle     ? String(subStyle)     : "",
-              keystone:   primaryRuneId ? String(primaryRuneId) : "",
+              primary:      primaryStyle  ? String(primaryStyle)  : "",
+              secondary:    subStyle      ? String(subStyle)      : "",
+              keystone:     primaryRuneId ? String(primaryRuneId) : "",
               primaryStyle,
               subStyle,
               primaryRuneId,
@@ -258,26 +324,23 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
             summonerSpells: [String(spell1Id), String(spell2Id)],
             spell1Id,
             spell2Id,
-            skillOrder: "",  // preenchido depois pelo timeline
+            skillOrder:          "",   // preenchido pela timeline abaixo
             gameDuration:        `${mm}:${String(ss).padStart(2, "0")}`,
             gameDurationSeconds: dur,
-            gameCreation: info.gameCreation ?? Date.now(),
-            queueId:  info.queueId ?? 0,
-            region:   platform,
+            gameCreation:        info.gameCreation ?? Date.now(),
+            queueId:             info.queueId ?? 0,
+            region:              platform,
             platform,
-            lane: teamPosition,
+            lane:                teamPosition,
             primaryStyle,
             subStyle,
             primaryRuneId,
             runeSelections,
             subSelections,
             statShards,
-            item0: part.item0 ?? 0,
-            item1: part.item1 ?? 0,
-            item2: part.item2 ?? 0,
-            item3: part.item3 ?? 0,
-            item4: part.item4 ?? 0,
-            item5: part.item5 ?? 0,
+            item0: part.item0 ?? 0, item1: part.item1 ?? 0,
+            item2: part.item2 ?? 0, item3: part.item3 ?? 0,
+            item4: part.item4 ?? 0, item5: part.item5 ?? 0,
             item6: part.item6 ?? 0,
             totalMinionsKilled,
             neutralMinionsKilled,
@@ -285,8 +348,8 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
             csPerMin,
             teamKills,
             killParticipation,
-            goldEarned:                   part.goldEarned                   ?? 0,
-            totalDamageDealtToChampions:  part.totalDamageDealtToChampions  ?? 0,
+            goldEarned:                  part.goldEarned                  ?? 0,
+            totalDamageDealtToChampions: part.totalDamageDealtToChampions ?? 0,
           };
         } catch {
           return null;
@@ -297,11 +360,10 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
     for (const r of results) {
       if (r !== null) matches.push(r);
     }
-
     await sleep(250);
   }
 
-  // ── Skill order via Match Timeline API ────────────────────────────────────
+  // ── 7. Skill order via Match Timeline API ──
   const SKILL_SLOT: Record<number, string> = { 1: "Q", 2: "W", 3: "E", 4: "R" };
 
   for (let i = 0; i < matches.length; i += 5) {
@@ -309,7 +371,7 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
 
     await Promise.all(
       batch.map(async (match) => {
-        const matchId    = match.matchId as string;
+        const matchId    = match.matchId    as string;
         const champPuuid = match._champPuuid as string;
         if (!matchId || !champPuuid) return;
         try {
@@ -320,46 +382,43 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
           // Encontra o participantId pelo puuid do campeão
           const tlParticipants: Array<{ participantId: number; puuid: string }> =
             data.info?.participants ?? [];
-          const tlParticipant = tlParticipants.find((p) => p.puuid === champPuuid);
-          if (!tlParticipant) return;
+          const tlPart = tlParticipants.find((x) => x.puuid === champPuuid);
+          if (!tlPart) return;
 
-          const pid = tlParticipant.participantId;
+          const pid = tlPart.participantId;
 
-          // Coleta eventos SKILL_LEVEL_UP para esse participante
+          // Coleta SKILL_LEVEL_UP ordenados por timestamp
           const skillEvents: Array<{ timestamp: number; skillSlot: number }> = [];
           for (const frame of data.info?.frames ?? []) {
-            for (const event of frame.events ?? []) {
+            for (const ev of frame.events ?? []) {
               if (
-                event.type === "SKILL_LEVEL_UP" &&
-                event.participantId === pid &&
-                event.levelUpType === "NORMAL"
+                ev.type === "SKILL_LEVEL_UP" &&
+                ev.participantId === pid &&
+                ev.levelUpType === "NORMAL"
               ) {
-                skillEvents.push({ timestamp: event.timestamp, skillSlot: event.skillSlot });
+                skillEvents.push({ timestamp: ev.timestamp, skillSlot: ev.skillSlot });
               }
             }
           }
-
           skillEvents.sort((a, b) => a.timestamp - b.timestamp);
           match.skillOrder = skillEvents.map((e) => SKILL_SLOT[e.skillSlot] ?? "?").join("");
         } catch {
-          // Sem timeline: mantém skillOrder vazio
+          // Sem timeline disponível — mantém skillOrder vazio
         }
       })
     );
-
     await sleep(250);
   }
 
-  // Remove campo interno _champPuuid antes de retornar
-  for (const m of matches) {
-    delete (m as Record<string, unknown>)._champPuuid;
-  }
+  // Remove campo interno antes de retornar
+  for (const m of matches) delete (m as Record<string, unknown>)._champPuuid;
 
   return {
     matches,
     total:   matches.length,
     region:  platform,
     champId,
-    message: `${matches.length} partidas reais encontradas`,
+    tiers:   [...new Set(matches.map((m) => m.tier as string))],
+    message: `${matches.length} partidas reais (Diamond–Challenger) encontradas`,
   };
 }
