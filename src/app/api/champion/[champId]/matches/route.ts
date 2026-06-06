@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { isPlatform, PLATFORMS } from "@/lib/types";
 import { cached } from "@/lib/cache";
 
+// Permite até 60 s no Vercel Pro (necessário para count alto + muitas timelines)
+export const maxDuration = 60;
+
 const API_KEY = process.env.RIOT_API_KEY;
 
 // Mapeia label da UI → teamPosition da Riot API
@@ -27,8 +30,11 @@ export async function GET(
   { params }: { params: Promise<{ champId: string }> }
 ) {
   const { champId } = await params;
-  const region = req.nextUrl.searchParams.get("region") ?? "br1";
-  const lane   = req.nextUrl.searchParams.get("lane")   ?? "";
+  const region   = req.nextUrl.searchParams.get("region") ?? "br1";
+  const lane     = req.nextUrl.searchParams.get("lane")   ?? "";
+  const rawCount = parseInt(req.nextUrl.searchParams.get("count") ?? "10", 10);
+  // min 5, max 30 para não explodir o rate limit/timeout
+  const count    = Math.min(Math.max(rawCount, 5), 30);
 
   if (!isPlatform(region)) {
     return NextResponse.json({ error: "Região inválida" }, { status: 400 });
@@ -37,12 +43,12 @@ export async function GET(
     return NextResponse.json({ matches: [], total: 0, message: "API Key não configurada" });
   }
 
-  // v5: inclui Diamond + sort por tier
-  const cacheKey = `champion-matches-v5:${champId}:${region}:${lane}`;
+  // v6: inclui count no cache key
+  const cacheKey = `champion-matches-v6:${champId}:${region}:${lane}:${count}`;
 
   try {
     const data = await cached(cacheKey, 30 * 60 * 1000, () =>
-      fetchRealMatches(champId, region, lane)
+      fetchRealMatches(champId, region, lane, count)
     );
     return NextResponse.json(data);
   } catch (err: unknown) {
@@ -86,7 +92,7 @@ function playerSortKey(p: Player): number {
   return t + d - p.lp; // menor = mais prioritário
 }
 
-async function fetchRealMatches(champId: string, platform: string, lane: string) {
+async function fetchRealMatches(champId: string, platform: string, lane: string, TARGET = 10) {
   const p = PLATFORMS[platform as keyof typeof PLATFORMS];
   const platHost = `https://${platform}.api.riotgames.com`;
   const regHost  = `https://${p.regional}.api.riotgames.com`;
@@ -183,8 +189,7 @@ async function fetchRealMatches(champId: string, platform: string, lane: string)
 
   type MatchCandidate = Player & { matchId: string };
   const champMatchIds: MatchCandidate[] = [];
-  const TARGET = 10;
-  const BATCH  = 5;
+  const BATCH = 5;
 
   // ── 5. Busca match IDs filtrados pelo campeão ──
   for (let i = 0; i < sorted.length; i += BATCH) {

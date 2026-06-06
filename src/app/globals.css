@@ -5639,3 +5639,224 @@ a.lobby-name:hover {
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   PÁGINA DEDICADA DE PARTIDAS (/champion/[id]/partidas)
+   ═══════════════════════════════════════════════════════════ */
+
+.partidas-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+}
+
+.partidas-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.partidas-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.partidas-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+}
+
+.partidas-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.partidas-back-btn:hover {
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+.partidas-filters {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding: 0.85rem 1rem;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.partidas-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.partidas-region-select {
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.partidas-region-select:focus {
+  outline: none;
+  border-color: var(--accent-2);
+}
+
+/* Barra de resumo de stats */
+.partidas-summary {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.7rem 1.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.partidas-summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  padding: 0 1rem;
+}
+
+.partidas-summary-label {
+  font-size: 0.62rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.partidas-summary-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.partidas-summary-sep {
+  width: 1px;
+  height: 36px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Botão Ver mais */
+.partidas-load-more {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0;
+}
+
+.ver-mais-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ver-mais-btn:hover {
+  border-color: var(--accent-2);
+  background: rgba(10, 200, 185, 0.06);
+}
+
+.ver-mais-count {
+  background: var(--accent-2);
+  color: #000;
+  font-weight: 800;
+  font-size: 0.78rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 20px;
+}
+
+.ver-mais-total {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
+/* Estado vazio / erro */
+.partidas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--muted);
+}
+
+/* Link "Ver todas as partidas" no BuildTab */
+.ver-todas-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--accent-2);
+  text-decoration: none;
+  font-weight: 600;
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  border: 1px solid rgba(10, 200, 185, 0.3);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.ver-todas-link:hover {
+  background: rgba(10, 200, 185, 0.08);
+  border-color: var(--accent-2);
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .partidas-summary {
+    justify-content: center;
+  }
+  .partidas-summary-item {
+    padding: 0 0.6rem;
+  }
+  .partidas-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .partidas-filters {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

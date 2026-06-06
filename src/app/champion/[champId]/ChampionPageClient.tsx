@@ -804,9 +804,17 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
         <section className="build-section">
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.5rem"}}>
             <h3 className="build-section-title" style={{margin:0}}>Partidas Recentes — Monochampions</h3>
-            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
-              {wins}V/{total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas
-            </span>
+            <div style={{display:"flex",alignItems:"center",gap:"0.75rem",flexWrap:"wrap"}}>
+              <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
+                {wins}V/{total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas
+              </span>
+              <Link
+                href={`/champion/${buildData.champId}/partidas?region=${region}${apiLane ? `&lane=${apiLane}` : ""}`}
+                className="ver-todas-link"
+              >
+                Ver todas ↗
+              </Link>
+            </div>
           </div>
           <p className="muted-sm" style={{marginBottom:"0.5rem"}}>
             {isRealData ? (
