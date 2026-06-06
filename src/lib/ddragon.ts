@@ -96,6 +96,65 @@ export function mockTierStats(champId: string) {
   return { winRate: +winRate.toFixed(1), pickRate: +pickRate.toFixed(1), banRate: +banRate.toFixed(1), tier };
 }
 
+// ── Runas do Data Dragon ────────────────────────────────────────────────────
+
+export interface DDRune {
+  id: number;
+  key: string;
+  icon: string;
+  name: string;
+  shortDesc: string;
+  longDesc: string;
+}
+
+export interface DDRuneTree {
+  id: number;
+  key: string;
+  icon: string;
+  name: string;
+  slots: Array<{ runes: DDRune[] }>;
+}
+
+let runeCache: { data: Map<number, { name: string; icon: string }>; expiresAt: number } | null = null;
+
+/**
+ * Busca os dados de runas do Data Dragon e retorna um mapa { [runeId]: { name, icon } }.
+ * Cache de 1 hora.
+ */
+export async function fetchRuneData(): Promise<Map<number, { name: string; icon: string }>> {
+  const now = Date.now();
+  if (runeCache && now < runeCache.expiresAt) {
+    return runeCache.data;
+  }
+
+  try {
+    const res = await fetch(
+      `${DD_BASE}/data/pt_BR/runesReforged.json`,
+      { next: { revalidate: 3600 } }
+    );
+    const trees: DDRuneTree[] = await res.json();
+
+    const map = new Map<number, { name: string; icon: string }>();
+    for (const tree of trees) {
+      for (const slot of tree.slots) {
+        for (const rune of slot.runes) {
+          map.set(rune.id, {
+            name: rune.name,
+            icon: `perk-images/Styles/${tree.key}/${rune.key}/${rune.key}.png`,
+          });
+        }
+      }
+    }
+
+    runeCache = { data: map, expiresAt: now + 3_600_000 }; // 1 hora
+    return map;
+  } catch {
+    // Fallback: retorna cache expirado se existir
+    if (runeCache) return runeCache.data;
+    return new Map();
+  }
+}
+
 // Mapeia tags Data Dragon → posição LoL
 export function primaryRole(tags: string[]): string {
   if (tags.includes("Marksman")) return "ADC";

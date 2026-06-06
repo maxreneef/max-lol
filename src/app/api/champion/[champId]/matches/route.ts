@@ -121,6 +121,61 @@ async function fetchRealMatches(champId: string, platform: string) {
       const riotName = part.riotIdGameName ?? part.summonerName ?? "";
       const riotTag  = part.riotIdTagline ?? "";
 
+      // Campos novos: lane, spells, runas, itens, CS, gold, dano
+      const lane = part.teamPosition ?? part.lane ?? "";
+      const spell1Id = part.summoner1Id ?? 0;
+      const spell2Id = part.summoner2Id ?? 0;
+
+      // Runas
+      const primaryStyle  = part.perks?.styles?.[0]?.style ?? 0;
+      const subStyle      = part.perks?.styles?.[1]?.style ?? 0;
+      const primaryRuneId = part.perks?.styles?.[0]?.selections?.[0]?.perk ?? 0;
+
+      // Sub-runas (todas as seleções da árvore primária)
+      const runeSelections: number[] = [];
+      if (part.perks?.styles?.[0]?.selections) {
+        for (const sel of part.perks.styles[0].selections) {
+          runeSelections.push(sel.perk);
+        }
+      }
+      // Seleções da árvore secundária
+      const subSelections: number[] = [];
+      if (part.perks?.styles?.[1]?.selections) {
+        for (const sel of part.perks.styles[1].selections) {
+          subSelections.push(sel.perk);
+        }
+      }
+      // Shards (estilo 3: estatísticas)
+      const statShards: number[] = [];
+      if (part.perks?.statPerks) {
+        for (const sp of Object.values(part.perks.statPerks)) {
+          if (typeof sp === "number") statShards.push(sp);
+        }
+      }
+
+      // CS
+      const totalMinionsKilled = part.totalMinionsKilled ?? 0;
+      const neutralMinionsKilled = part.neutralMinionsKilled ?? 0;
+      const cs = totalMinionsKilled + neutralMinionsKilled;
+      const csPerMin = dur > 0 ? +(cs / (dur / 60)).toFixed(1) : 0;
+
+      // Team kills — somar kills de todos com mesmo teamId
+      const teamId = part.teamId;
+      const teamKills = info.participants
+        .filter((p: { teamId: number }) => p.teamId === teamId)
+        .reduce((sum: number, p: { kills: number }) => sum + (p.kills ?? 0), 0);
+
+      // Kill participation
+      const killParticipation = teamKills > 0
+        ? Math.round(((part.kills ?? 0) + (part.assists ?? 0)) / teamKills * 100)
+        : 0;
+
+      // Skill order via challenges.skillsUsed se disponível
+      let skillOrder = "";
+      if (part.challenges?.skillOrder) {
+        skillOrder = part.challenges.skillOrder;
+      }
+
       matches.push({
         matchId: mid,
         summonerName: riotName || player?.summonerName || "Invocador",
@@ -134,14 +189,51 @@ async function fetchRealMatches(champId: string, platform: string) {
         assists: part.assists ?? 0,
         kda: `${part.kills ?? 0}/${part.deaths ?? 0}/${part.assists ?? 0}`,
         items,
-        runes: { primary: "Riot", secondary: "Riot", keystone: "Riot" },
-        summonerSpells: [String(part.summoner1Id ?? ""), String(part.summoner2Id ?? "")],
-        skillOrder: "Q>W>E",
+        runes: {
+          primary: primaryStyle ? String(primaryStyle) : "Riot",
+          secondary: subStyle ? String(subStyle) : "Riot",
+          keystone: primaryRuneId ? String(primaryRuneId) : "Riot",
+          primaryStyle: primaryStyle || 0,
+          subStyle: subStyle || 0,
+          primaryRuneId: primaryRuneId || 0,
+          runeSelections,
+          subSelections,
+          statShards,
+        },
+        summonerSpells: [String(spell1Id), String(spell2Id)],
+        spell1Id,
+        spell2Id,
+        skillOrder: skillOrder || "",
         gameDuration: `${m}:${String(s).padStart(2, "0")}`,
+        gameDurationSeconds: dur,
         gameCreation: info.gameCreation ?? Date.now(),
         queueId: info.queueId ?? 0,
         region: player?.summonerName ?? platform,
         platform,
+        // Novos campos
+        lane,
+        primaryStyle,
+        subStyle,
+        primaryRuneId,
+        // Slots individuais de runa (necessário para o buildAggregator)
+        runeSelections,
+        subSelections,
+        statShards,
+        item0: part.item0 ?? 0,
+        item1: part.item1 ?? 0,
+        item2: part.item2 ?? 0,
+        item3: part.item3 ?? 0,
+        item4: part.item4 ?? 0,
+        item5: part.item5 ?? 0,
+        item6: part.item6 ?? 0,
+        totalMinionsKilled,
+        neutralMinionsKilled,
+        cs,
+        csPerMin,
+        teamKills,
+        killParticipation,
+        goldEarned: part.goldEarned ?? 0,
+        totalDamageDealtToChampions: part.totalDamageDealtToChampions ?? 0,
       });
       await sleep(60);
     } catch { continue; }

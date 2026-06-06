@@ -14,6 +14,8 @@ import type {
   CounterHeadToHead,
   MatchEntry,
 } from "@/lib/mockChampData";
+import { SUMMONER_SPELL_IDS, RUNE_STYLE_IDS, BOOTS_IDS } from "@/lib/riotIds";
+import type { AggregatedBuildData } from "@/lib/buildAggregator";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -208,6 +210,26 @@ function LaneFilter({ lane, onChange }: { lane: string; onChange: (l: string) =>
 // BUILD TAB — Hierarquia: Runas (árvore) > Skills (18 níveis) > Itens (fluxo)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+/** Resolve runas: dados reais (IDs numéricos) ou mock (strings) → exibição */
+function formatRunes(
+  runes: Record<string, unknown>,
+  runeMap: Map<number, { name: string; icon: string }>,
+  isRealData: boolean,
+): React.ReactNode {
+  const r = runes as Record<string, unknown>;
+  const hasNum = typeof r.primaryStyle === "number" || typeof r.subStyle === "number";
+  if (hasNum && isRealData) {
+    const pId = (r.primaryStyle as number) || Number(r.primary) || 0;
+    const sId = (r.subStyle as number) || Number(r.secondary) || 0;
+    const ksId = (r.primaryRuneId as number) || Number(r.keystone) || 0;
+    const ks = runeMap.get(ksId);
+    const pName = RUNE_STYLE_IDS[pId]?.name ?? "—";
+    const sName = RUNE_STYLE_IDS[sId]?.name ?? "—";
+    return <><span className="match-keystone">{ks?.name ?? `Runa #${ksId}`}</span><span className="match-trees">{pName}/{sName}</span></>;
+  }
+  return <><span className="match-keystone">{String(r.keystone ?? "")}</span><span className="match-trees">{String(r.primary ?? "")}/{String(r.secondary ?? "")}</span></>;
+}
+
 function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string }) {
   const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory: mockHistory } = buildData;
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
@@ -215,6 +237,9 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
   const [enemyFilter, setEnemyFilter] = useState("");
   const [realMatches, setRealMatches] = useState<MatchEntry[] | null>(null);
   const [loadingMatches, setLoadingMatches] = useState(false);
+  const [realBuildData, setRealBuildData] = useState<AggregatedBuildData | null>(null);
+  const [loadingBuild, setLoadingBuild] = useState(false);
+  const [runeMap, setRuneMap] = useState<Map<number, { name: string; icon: string }>>(new Map());
 
   // Busca partidas REAIS da Riot API
   useEffect(() => {
@@ -248,7 +273,11 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
             gameDuration: m.gameDuration as string,
             gameCreation: m.gameCreation as number,
             queueId: m.queueId as number,
-          })));
+            // Novos campos
+            csPerMin: (m.csPerMin as number) ?? 0,
+            killParticipation: (m.killParticipation as number) ?? 0,
+            cs: (m.cs as number) ?? 0,
+          } as MatchEntry & { csPerMin?: number; killParticipation?: number; cs?: number })));
         }
       } catch { /* fallback para mock */ }
       finally { if (!cancelled) setLoadingMatches(false); }
@@ -257,12 +286,95 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
     return () => { cancelled = true; };
   }, [buildData.champId]);
 
+  // Busca dados AGREGADOS de build (runas, itens, feitiços com WR real)
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchBuild() {
+      setLoadingBuild(true);
+      try {
+        const res = await fetch(`/api/champion/${buildData.champId}/build?region=br1`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.hasRealData) {
+          setRealBuildData(data as AggregatedBuildData);
+        }
+      } catch { /* fallback para mock */ }
+      finally { if (!cancelled) setLoadingBuild(false); }
+    }
+    fetchBuild();
+    return () => { cancelled = true; };
+  }, [buildData.champId]);
+
+  // Busca dados de runas do Data Dragon (cache no client via state)
+  useEffect(() => {
+    let cancelled = false;
+    fetch("https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/runesReforged.json")
+      .then((r) => r.json())
+      .then((trees) => {
+        if (cancelled) return;
+        const map = new Map<number, { name: string; icon: string }>();
+        for (const tree of trees) {
+          for (const slot of tree.slots) {
+            for (const rune of slot.runes) {
+              map.set(rune.id, {
+                name: rune.name,
+                icon: `perk-images/Styles/${tree.key}/${rune.key}/${rune.key}.png`,
+              });
+            }
+          }
+        }
+        setRuneMap(map);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   // Usa partidas reais se disponíveis, senão mock
   const matchHistory = realMatches ?? mockHistory ?? [];
   const isRealData = realMatches !== null && realMatches.length > 0;
+  const isBuildReal = realBuildData !== null && realBuildData.hasRealData;
 
   const wins = matchHistory.filter((m) => m.win).length;
   const total = matchHistory.length;
+
+  // ── Converte dados reais de build para formato compatível com UI ──
+
+  // Feitiços convertidos (ID → nome/ícone DDragon)
+  const realSpells = useMemo(() => {
+    if (!realBuildData) return null;
+    return realBuildData.summonerSpells.map((s) => {
+      const s1 = SUMMONER_SPELL_IDS[s.spell1Id] ?? { name: String(s.spell1Id), icon: `Summoner${s.spell1Id}` };
+      const s2 = SUMMONER_SPELL_IDS[s.spell2Id] ?? { name: String(s.spell2Id), icon: `Summoner${s.spell2Id}` };
+      return { ...s, spell1Name: s1.name, spell1Icon: s1.icon, spell2Name: s2.name, spell2Icon: s2.icon };
+    });
+  }, [realBuildData]);
+
+  // Itens core convertidos (number[] → string[])
+  const realCoreItems = useMemo(() => {
+    if (!realBuildData) return null;
+    return realBuildData.coreItems.map((ci) => ({
+      ...ci,
+      strItems: ci.items.map(String),
+    }));
+  }, [realBuildData]);
+
+  // Itens iniciais convertidos
+  const realStartingItems = useMemo(() => {
+    if (!realBuildData) return null;
+    return realBuildData.startingItems.map((si) => ({
+      ...si,
+      strItems: si.items.map(String),
+    }));
+  }, [realBuildData]);
+
+  // Botas convertidas
+  const realBoots = useMemo(() => {
+    if (!realBuildData) return null;
+    return realBuildData.boots.map((b) => ({
+      ...b,
+      strId: String(b.itemId),
+    }));
+  }, [realBuildData]);
 
   // Filtra partidas
   const filteredMatches = useMemo(() => {
@@ -279,71 +391,177 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
       <div className="build-spells-mini">
         <span className="build-label-mini">Feitiços</span>
         <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
-          {summonerSpells.slice(0, 2).map((set, i) => (
-            <div key={i} style={{display:"flex",alignItems:"center",gap:"0.3rem"}}>
-              {set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={24} />)}
-              <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{set.pickRate}%</span>
-              <WRBadge wr={set.winRate} />
-            </div>
-          ))}
+          {realSpells ? (
+            realSpells.map((s, i) => (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:"0.3rem"}}>
+                <img src={`${DD_IMG}/spell/${s.spell1Icon}.png`} alt={s.spell1Name} width={24} height={24} className="item-icon" />
+                <img src={`${DD_IMG}/spell/${s.spell2Icon}.png`} alt={s.spell2Name} width={24} height={24} className="item-icon" />
+                <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{s.pickRate}%</span>
+                <WRBadge wr={s.winRate} />
+              </div>
+            ))
+          ) : (
+            summonerSpells.slice(0, 2).map((set, i) => (
+              <div key={i} style={{display:"flex",alignItems:"center",gap:"0.3rem"}}>
+                {set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={24} />)}
+                <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{set.pickRate}%</span>
+                <WRBadge wr={set.winRate} />
+              </div>
+            ))
+          )}
         </div>
       </div>
 
       {/* ═══ 2. RUNAS — árvore visual completa ═══ */}
       <section className="build-section">
         <h3 className="build-section-title">Runas</h3>
-        {buildData.runeSetups.slice(0, 2).map((setup, i) => (
-          <div key={i} className="rune-tree-full">
-            <div className="rune-tree-full-header">
-              <span style={{color:setup.primaryTreeColor,fontWeight:700}}>{setup.primaryTree}</span>
-              <span style={{color:"var(--muted)",fontSize:"0.65rem"}}>+ {setup.secondaryTree}</span>
-              <span style={{marginLeft:"auto",display:"flex",gap:"0.5rem",alignItems:"center"}}>
-                <span className="pick-rate-badge">{setup.pickRate}%</span>
-                <WRBadge wr={setup.winRate} />
-              </span>
-            </div>
-            <div className="rune-tree-visual">
-              {/* Árvore Primária */}
-              <div className="rune-tree-col">
-                <div className="rune-tree-col-label" style={{color:setup.primaryTreeColor}}>Primária</div>
-                <div className="rune-keystone-big">
-                  <RuneIcon path={setup.keystone.icon} size={48} />
-                  <div className="rune-keystone-info">
-                    <span className="rune-keystone-name">{setup.keystone.name}</span>
-                    <span style={{fontSize:"0.62rem",color:"var(--muted)"}}>{setup.keystone.pickRate}%</span>
+        {realBuildData ? (
+          /* ── Runas REAIS (agregadas de partidas) ── */
+          realBuildData.primaryStyles.slice(0, 2).map((primary, idx) => {
+            const pStyle = RUNE_STYLE_IDS[primary.styleId] ?? { name: `Estilo ${primary.styleId}`, color: "#888" };
+            const subStyleId = realBuildData.subStyles[idx]?.styleId ?? 0;
+            const subStyle = RUNE_STYLE_IDS[subStyleId] ?? { name: `Estilo ${subStyleId}`, color: "#888" };
+            const keystone = realBuildData.keystones.find((k) => {
+              // Associa keystone à árvore primária (simplificado: pega o mais popular)
+              return true;
+            });
+            const topKeystones = realBuildData.keystones
+              .filter((k) => runeMap.has(k.runeId))
+              .slice(0, 1);
+            const keystoneRune = topKeystones[0];
+            const keystoneInfo = keystoneRune ? runeMap.get(keystoneRune.runeId) : null;
+
+            return (
+              <div key={idx} className="rune-tree-full">
+                <div className="rune-tree-full-header">
+                  <span style={{color: pStyle.color, fontWeight: 700}}>{pStyle.name}</span>
+                  <span style={{color: "var(--muted)", fontSize: "0.65rem"}}>+ {subStyle.name}</span>
+                  <span style={{marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center"}}>
+                    <span className="pick-rate-badge">{primary.pickRate}%</span>
+                    <WRBadge wr={primary.winRate} />
+                  </span>
+                </div>
+                <div className="rune-tree-visual">
+                  <div className="rune-tree-col">
+                    <div className="rune-tree-col-label" style={{color: pStyle.color}}>Primária</div>
+                    {keystoneInfo && keystoneRune && (
+                      <div className="rune-keystone-big">
+                        <RuneIcon path={keystoneInfo.icon} size={48} />
+                        <div className="rune-keystone-info">
+                          <span className="rune-keystone-name">{keystoneInfo.name}</span>
+                          <span style={{fontSize: "0.62rem", color: "var(--muted)"}}>{keystoneRune.pickRate}%</span>
+                        </div>
+                      </div>
+                    )}
+                    {!keystoneInfo && (
+                      <div className="rune-keystone-big" style={{opacity: 0.5, padding: "0.5rem", fontSize: "0.72rem", color: "var(--muted)"}}>
+                        Keystone ID: {realBuildData.keystones[0]?.runeId ?? "—"}
+                      </div>
+                    )}
+                    {/* Slots 1-3 da árvore primária (dados reais agregados) */}
+                    <div className="rune-slots-row" style={{marginTop: "0.3rem"}}>
+                      {(realBuildData.primarySlots ?? []).map((slotOpts, si) => {
+                        const topRune = slotOpts[0];
+                        if (!topRune) return null;
+                        const ri = runeMap.get(topRune.runeId);
+                        return ri ? (
+                          <div key={si} className="rune-slot-mini">
+                            <RuneIcon path={ri.icon} size={28} />
+                            <span className="rune-slot-mini-name">{ri.name}</span>
+                            <span style={{fontSize: "0.6rem", color: "var(--muted)"}}>{topRune.pickRate}%</span>
+                          </div>
+                        ) : (
+                          <div key={si} className="rune-slot-mini" style={{opacity:0.4}}>
+                            <span style={{fontSize:"0.6rem"}}>#{topRune.runeId}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="rune-tree-col rune-tree-col-sec">
+                    <div className="rune-tree-col-label">Secundária</div>
+                    <div className="rune-slots-sec">
+                      {(realBuildData.subSlots ?? []).map((slotOpts, si) => {
+                        const topRune = slotOpts[0];
+                        if (!topRune) return null;
+                        const ri = runeMap.get(topRune.runeId);
+                        return ri ? (
+                          <div key={si} className="rune-slot-mini">
+                            <RuneIcon path={ri.icon} size={28} />
+                            <span className="rune-slot-mini-name">{ri.name}</span>
+                            <span style={{fontSize: "0.6rem", color: "var(--muted)"}}>{topRune.pickRate}%</span>
+                          </div>
+                        ) : (
+                          <div key={si} className="rune-slot-mini" style={{opacity:0.4}}>
+                            <span style={{fontSize:"0.6rem"}}>#{topRune.runeId}</span>
+                          </div>
+                        );
+                      })}
+                      {(realBuildData.subSlots ?? []).every(s => s.length === 0) && (
+                        <span style={{fontSize: "0.68rem", color: "var(--muted)", padding: "0.3rem"}}>
+                          {subStyle.name}
+                          {subStyleId !== 0 && ` · ${realBuildData.subStyles.find(s => s.styleId === subStyleId)?.pickRate ?? "—"}%`}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="rune-slots-row">
-                  {[setup.slot1, setup.slot2, setup.slot3].map((rune, si) => (
-                    <div key={si} className="rune-slot-mini">
-                      <RuneIcon path={rune.icon} size={32} />
-                      <span className="rune-slot-mini-name">{rune.name}</span>
-                      <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
-                    </div>
-                  ))}
-                </div>
               </div>
-              {/* Árvore Secundária */}
-              <div className="rune-tree-col rune-tree-col-sec">
-                <div className="rune-tree-col-label">Secundária</div>
-                <div className="rune-slots-sec">
-                  {[setup.secondary1, setup.secondary2].map((rune, si) => (
-                    <div key={si} className="rune-slot-mini">
-                      <RuneIcon path={rune.icon} size={32} />
-                      <span className="rune-slot-mini-name">{rune.name}</span>
-                      <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
+            );
+          })
+        ) : (
+          /* ── Runas MOCK (fallback) ── */
+          buildData.runeSetups.slice(0, 2).map((setup, i) => (
+            <div key={i} className="rune-tree-full">
+              <div className="rune-tree-full-header">
+                <span style={{color:setup.primaryTreeColor,fontWeight:700}}>{setup.primaryTree}</span>
+                <span style={{color:"var(--muted)",fontSize:"0.65rem"}}>+ {setup.secondaryTree}</span>
+                <span style={{marginLeft:"auto",display:"flex",gap:"0.5rem",alignItems:"center"}}>
+                  <span className="pick-rate-badge">{setup.pickRate}%</span>
+                  <WRBadge wr={setup.winRate} />
+                </span>
+              </div>
+              <div className="rune-tree-visual">
+                <div className="rune-tree-col">
+                  <div className="rune-tree-col-label" style={{color:setup.primaryTreeColor}}>Primária</div>
+                  <div className="rune-keystone-big">
+                    <RuneIcon path={setup.keystone.icon} size={48} />
+                    <div className="rune-keystone-info">
+                      <span className="rune-keystone-name">{setup.keystone.name}</span>
+                      <span style={{fontSize:"0.62rem",color:"var(--muted)"}}>{setup.keystone.pickRate}%</span>
                     </div>
-                  ))}
+                  </div>
+                  <div className="rune-slots-row">
+                    {[setup.slot1, setup.slot2, setup.slot3].map((rune, si) => (
+                      <div key={si} className="rune-slot-mini">
+                        <RuneIcon path={rune.icon} size={32} />
+                        <span className="rune-slot-mini-name">{rune.name}</span>
+                        <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="rune-shards-row">
-                  <span className="rune-shard-badge">{setup.shard1}</span>
-                  <span className="rune-shard-badge">{setup.shard2}</span>
-                  <span className="rune-shard-badge">{setup.shard3}</span>
+                <div className="rune-tree-col rune-tree-col-sec">
+                  <div className="rune-tree-col-label">Secundária</div>
+                  <div className="rune-slots-sec">
+                    {[setup.secondary1, setup.secondary2].map((rune, si) => (
+                      <div key={si} className="rune-slot-mini">
+                        <RuneIcon path={rune.icon} size={32} />
+                        <span className="rune-slot-mini-name">{rune.name}</span>
+                        <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="rune-shards-row">
+                    <span className="rune-shard-badge">{setup.shard1}</span>
+                    <span className="rune-shard-badge">{setup.shard2}</span>
+                    <span className="rune-shard-badge">{setup.shard3}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </section>
 
       {/* ═══ 3. ORDEM DE SKILLS — 18 níveis ═══ */}
@@ -390,17 +608,31 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
           <div className="items-flow-block">
             <span className="items-flow-label">Iniciais</span>
             <div className="items-flow-options">
-              {startingItems.slice(0, 3).map((set, i) => (
-                <div key={i} className="items-flow-option">
-                  <div className="items-flow-icons">
-                    {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+              {realStartingItems ? (
+                realStartingItems.slice(0, 3).map((set, i) => (
+                  <div key={i} className="items-flow-option">
+                    <div className="items-flow-icons">
+                      {set.strItems.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                    </div>
+                    <div className="items-flow-stats">
+                      <span className="pick-rate-badge">{set.pickRate}%</span>
+                      <WRBadge wr={set.winRate} />
+                    </div>
                   </div>
-                  <div className="items-flow-stats">
-                    <span className="pick-rate-badge">{set.pickRate}%</span>
-                    <WRBadge wr={set.winRate} />
+                ))
+              ) : (
+                startingItems.slice(0, 3).map((set, i) => (
+                  <div key={i} className="items-flow-option">
+                    <div className="items-flow-icons">
+                      {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                    </div>
+                    <div className="items-flow-stats">
+                      <span className="pick-rate-badge">{set.pickRate}%</span>
+                      <WRBadge wr={set.winRate} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -410,84 +642,122 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
           <div className="items-flow-block">
             <span className="items-flow-label">Botas</span>
             <div className="items-flow-options">
-              {boots.slice(0, 3).map((set, i) => (
-                <div key={i} className="items-flow-option">
-                  <div className="items-flow-icons">
-                    {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+              {realBoots ? (
+                realBoots.slice(0, 3).map((b, i) => (
+                  <div key={i} className="items-flow-option">
+                    <div className="items-flow-icons">
+                      <ItemIcon id={b.strId} size={32} />
+                    </div>
+                    <div className="items-flow-stats">
+                      <span className="pick-rate-badge">{b.pickRate}%</span>
+                      <WRBadge wr={b.winRate} />
+                    </div>
                   </div>
-                  <div className="items-flow-stats">
-                    <span className="pick-rate-badge">{set.pickRate}%</span>
-                    <WRBadge wr={set.winRate} />
+                ))
+              ) : (
+                boots.slice(0, 3).map((set, i) => (
+                  <div key={i} className="items-flow-option">
+                    <div className="items-flow-icons">
+                      {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                    </div>
+                    <div className="items-flow-stats">
+                      <span className="pick-rate-badge">{set.pickRate}%</span>
+                      <WRBadge wr={set.winRate} />
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
 
         {/* Build Principal (2 itens core) + expansão para 3°/4°/5° */}
-        <div className="items-flow" style={{marginTop:"0.75rem"}}>
-          <div className="items-flow-block items-flow-block-wide">
-            <span className="items-flow-label">Build Principal (clique para expandir)</span>
-            <div className="items-flow-options">
-              {coreBuilds.slice(0, 3).map((set, i) => (
-                <button
-                  key={i}
-                  className={`items-flow-option items-flow-clickable ${selectedCore===i?"selected":""}`}
-                  onClick={() => setSelectedCore(i)}
-                >
-                  <div className="items-flow-icons">
-                    {set.items.slice(0, 2).map((id) => <ItemIcon key={id} id={id} size={36} />)}
+        {realCoreItems ? (
+          /* ── Core builds REAIS ── */
+          <div className="items-flow" style={{marginTop:"0.75rem"}}>
+            <div className="items-flow-block items-flow-block-wide">
+              <span className="items-flow-label">Build Principal (core de 2 itens)</span>
+              <div className="items-flow-options">
+                {realCoreItems.slice(0, 3).map((set, i) => (
+                  <div key={i} className="items-flow-option">
+                    <div className="items-flow-icons">
+                      {set.strItems.map((id) => <ItemIcon key={id} id={id} size={36} />)}
+                    </div>
+                    <div className="items-flow-stats">
+                      <span className="pick-rate-badge">{set.pickRate}%</span>
+                      <WRBadge wr={set.winRate} />
+                    </div>
                   </div>
-                  <div className="items-flow-stats">
-                    <span className="pick-rate-badge">{set.pickRate}%</span>
-                    <WRBadge wr={set.winRate} />
-                  </div>
-                </button>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
+        ) : (
+          <>
+            <div className="items-flow" style={{marginTop:"0.75rem"}}>
+              <div className="items-flow-block items-flow-block-wide">
+                <span className="items-flow-label">Build Principal (clique para expandir)</span>
+                <div className="items-flow-options">
+                  {coreBuilds.slice(0, 3).map((set, i) => (
+                    <button
+                      key={i}
+                      className={`items-flow-option items-flow-clickable ${selectedCore===i?"selected":""}`}
+                      onClick={() => setSelectedCore(i)}
+                    >
+                      <div className="items-flow-icons">
+                        {set.items.slice(0, 2).map((id) => <ItemIcon key={id} id={id} size={36} />)}
+                      </div>
+                      <div className="items-flow-stats">
+                        <span className="pick-rate-badge">{set.pickRate}%</span>
+                        <WRBadge wr={set.winRate} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-          {/* Itens seguintes baseados na core selecionada */}
-          {selectedCore !== null && (
-            <>
-              <span className="items-flow-arrow">→</span>
-              <div className="items-flow-block">
-                <span className="items-flow-label">3° Item</span>
-                <div className="items-flow-options">
-                  {fourthItems.slice(0, 3).map((set, i) => (
-                    <div key={i} className="items-flow-option">
-                      <div className="items-flow-icons">
-                        {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
-                      </div>
-                      <div className="items-flow-stats">
-                        <span className="pick-rate-badge">{set.pickRate}%</span>
-                        <WRBadge wr={set.winRate} />
-                      </div>
+              {/* Itens seguintes baseados na core selecionada */}
+              {selectedCore !== null && (
+                <>
+                  <span className="items-flow-arrow">→</span>
+                  <div className="items-flow-block">
+                    <span className="items-flow-label">3° Item</span>
+                    <div className="items-flow-options">
+                      {fourthItems.slice(0, 3).map((set, i) => (
+                        <div key={i} className="items-flow-option">
+                          <div className="items-flow-icons">
+                            {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                          </div>
+                          <div className="items-flow-stats">
+                            <span className="pick-rate-badge">{set.pickRate}%</span>
+                            <WRBadge wr={set.winRate} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-              <span className="items-flow-arrow">→</span>
-              <div className="items-flow-block">
-                <span className="items-flow-label">4°–5°</span>
-                <div className="items-flow-options">
-                  {fifthItems.slice(0, 3).map((set, i) => (
-                    <div key={i} className="items-flow-option">
-                      <div className="items-flow-icons">
-                        {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
-                      </div>
-                      <div className="items-flow-stats">
-                        <span className="pick-rate-badge">{set.pickRate}%</span>
-                        <WRBadge wr={set.winRate} />
-                      </div>
+                  </div>
+                  <span className="items-flow-arrow">→</span>
+                  <div className="items-flow-block">
+                    <span className="items-flow-label">4°–5°</span>
+                    <div className="items-flow-options">
+                      {fifthItems.slice(0, 3).map((set, i) => (
+                        <div key={i} className="items-flow-option">
+                          <div className="items-flow-icons">
+                            {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
+                          </div>
+                          <div className="items-flow-stats">
+                            <span className="pick-rate-badge">{set.pickRate}%</span>
+                            <WRBadge wr={set.winRate} />
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </>
+        )}
       </section>
 
       {/* ═══ 5. FILTRO COUNTER-PICK ═══ */}
@@ -528,21 +798,26 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
             </span>
           </div>
           <p className="muted-sm" style={{marginBottom:"0.5rem"}}>
-            {isRealData
-              ? "✅ Dados REAIS da Riot API — partidas de jogadores do topo do leaderboard. Clique para ver detalhes."
-              : loadingMatches
-                ? "⏳ Buscando partidas reais da Riot API..."
-                : "⚠️ Dados de demonstração. Configure a Riot API Key para ver partidas reais."}
+            {isRealData ? (
+              <>✅ Dados REAIS da Riot API — {total} partidas de jogadores do topo do leaderboard.{" "}
+              {isBuildReal && <>✅ Build calculada de {realBuildData!.totalGames} partidas reais.</>}
+              </>
+            ) : loadingMatches ? (
+              "⏳ Buscando partidas reais da Riot API..."
+            ) : (
+              "⚠️ Dados de demonstração. Configure a Riot API Key para ver partidas reais."
+            )}
           </p>
 
           <div className="matches-table-wrap">
             <table className="matches-table">
               <thead>
-                <tr><th>Jogador</th><th>Elo</th><th>Reg</th><th>Res</th><th>KDA</th><th>Itens</th><th>Runas</th><th>Skills</th><th>Dur</th></tr>
+                <tr><th>Jogador</th><th>Elo</th><th>Reg</th><th>Res</th><th>KDA</th><th>CS/min</th><th>P/Kill%</th><th>Itens</th><th>Runas</th><th>Skills</th><th>Dur</th></tr>
               </thead>
               <tbody>
                 {filteredMatches.slice(0, 20).map((m, i) => {
                   const FLG: Record<string, string> = { br1:"🇧🇷", kr:"🇰🇷", euw1:"🇪🇺", na1:"🇺🇸", oc1:"🇦🇺" };
+                  const mExt = m as MatchEntry & { csPerMin?: number; killParticipation?: number; cs?: number };
                   return (
                     <tr key={i} className={m.win?"match-row-win":"match-row-loss"} style={{cursor:"pointer"}} onClick={() => setExpandedMatch(expandedMatch===i?null:i)}>
                       <td><span className="match-player-name">{m.summonerName}</span><span className="match-player-tag" style={{marginLeft:4}}>#{m.tagLine}</span></td>
@@ -550,8 +825,16 @@ function BuildTab({ buildData, detail, ddBase }: { buildData: ChampionBuildData;
                       <td>{FLG[m.platform]??"🌐"}</td>
                       <td><span className={`match-result ${m.win?"win":"loss"}`}>{m.win?"V":"D"}</span></td>
                       <td><span className="match-kda">{m.kda}</span></td>
+                      <td className="muted-sm" style={{fontSize:"0.68rem"}}>
+                        {mExt.cs != null ? <>{mExt.cs} <span style={{color:"var(--muted)",opacity:0.7}}>({mExt.csPerMin ?? "—"})</span></> : "—"}
+                      </td>
+                      <td>
+                        {mExt.killParticipation != null && mExt.killParticipation > 0
+                          ? <span style={{fontSize:"0.7rem",padding:"0.1rem 0.35rem",borderRadius:4,background:"var(--panel)",border:"1px solid var(--border)"}}>{mExt.killParticipation}%</span>
+                          : <span className="muted-sm">—</span>}
+                      </td>
                       <td><div className="match-items-row">{m.items.map((id,j)=><ItemIcon key={j} id={id} size={20} />)}</div></td>
-                      <td><div className="match-runes-info"><span className="match-keystone">{m.runes.keystone}</span><span className="match-trees">{m.runes.primary}/{m.runes.secondary}</span></div></td>
+                      <td><div className="match-runes-info">{formatRunes(m.runes, runeMap, isRealData)}</div></td>
                       <td><span className="match-skill-order">{m.skillOrder}</span></td>
                       <td className="muted-sm">{m.gameDuration}</td>
                     </tr>
