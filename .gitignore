@@ -45,7 +45,6 @@ next-env.d.ts
 /ESPECIFICACAO_BUILD_TAB.md
 /scan.ps1
 /scan_otp_init.ps1
-/vercel.json
 
 # logs do scan e scripts temporarios de diagnostico/migracao
 /scan_logs/
