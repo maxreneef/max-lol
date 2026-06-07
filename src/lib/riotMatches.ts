@@ -135,7 +135,9 @@ export function playerSortKey(p: Player): number {
 }
 
 /** Leaderboard completo (Challenger + GM + Master + Diamond I–IV + Emerald I), ordenado por elo+LP.
- *  @param useCache - false para scan/robô (não envenena cache com erros), true (default) para leituras do site. */
+ *  @param useCache - true (default) usa cache Data Cache do Next.js (30 min). O scan também usa
+ *  cache=true porque o leaderboard não muda a cada minuto e centenas de páginas sem cache
+ *  estouram os 60s do Vercel. */
 export async function getLeaderboard(platform: string, useCache = true): Promise<Player[]> {
   const { platHost } = hosts(platform);
   const all: Player[] = [];
@@ -166,9 +168,10 @@ export async function getLeaderboard(platform: string, useCache = true): Promise
 
   await sleep(300);
 
-  // Fetch dinâmico: continua paginando até resposta vazia ou < 200 entradas
-  // Diamante IV sozinho tem 35+ paginas (+7.000 jogadores). Sem isso, 99% do D4 fica invisivel.
-  async function fetchAllPages(div: string, tier: string, maxPages = 50): Promise<Player[]> {
+  // Fetch dinâmico: continua paginando até resposta vazia ou < 200 entradas.
+  // maxPages reduzido de 50 para 5 — o scan processa 15 jogadores por vez, então
+  // 5 páginas (≈1000 jogadores por divisão) é mais que suficiente.
+  async function fetchAllPages(div: string, tier: string, maxPages = 5): Promise<Player[]> {
     const out: Player[] = [];
     for (let page = 1; page <= maxPages; page++) {
       try {
@@ -192,17 +195,12 @@ export async function getLeaderboard(platform: string, useCache = true): Promise
     return out;
   }
 
-  // Diamond I–IV (todas as paginas, sequencial por divisao)
-  for (const div of ["I", "II", "III", "IV"]) {
-    const players = await fetchAllPages(div, "DIAMOND");
-    all.push(...players);
-  }
-
-  await sleep(300);
-
-  // Emerald I (todas as paginas)
-  const emerald = await fetchAllPages("I", "EMERALD");
-  for (const b of emerald) all.push(b);
+  // Diamond I–IV + Emerald I (paralelo entre divisões para caber nos 60s do Vercel)
+  const divisionResults = await Promise.all([
+    ...["I", "II", "III", "IV"].map((div) => fetchAllPages(div, "DIAMOND")),
+    fetchAllPages("I", "EMERALD"),
+  ]);
+  for (const players of divisionResults) all.push(...players);
 
   return all.sort((a, b) => playerSortKey(a) - playerSortKey(b));
 }
