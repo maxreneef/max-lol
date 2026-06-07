@@ -39,7 +39,7 @@ export const PLATFORMS = {
   br1:   { label: "Brasil",                regional: "americas", flag: "br" },
   na1:   { label: "América do Norte",      regional: "americas", flag: "us" },
   euw1:  { label: "Europa Oeste",          regional: "europe",   flag: "euw" },
-  eune1: { label: "Europa Norte/Leste",    regional: "europe",   flag: "eune" },
+  eun1:  { label: "Europa Norte/Leste",    regional: "europe",   flag: "eune" },
   kr:    { label: "Coreia do Sul",         regional: "asia",     flag: "kr" },
   jp1:   { label: "Japão",                 regional: "asia",     flag: "jp" },
   oc1:   { label: "Oceania",               regional: "asia",     flag: "oce" },
