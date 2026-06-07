@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
 async function scanOtpOnly(region: string) {
   await initSchema();
 
-  const players = await getLeaderboard(region, false); // useCache=false → não envenena cache
+  const players = await getLeaderboard(region, true); // usa cache 30min — leaderboard é pesado e não muda rápido
   if (players.length === 0) {
     return { ok: false, error: "Leaderboard vazio — verifique a API Key" };
   }
@@ -181,7 +181,7 @@ async function scanRegion(region: string) {
   }
 
   try {
-    const players = await getLeaderboard(region, false); // useCache=false
+    const players = await getLeaderboard(region, true); // usa cache 30min — leaderboard é pesado e não muda rápido
     if (players.length === 0) {
       const cursorAtual = await getCursor(region);
       await unlockScan(region);
