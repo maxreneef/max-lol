@@ -19,9 +19,18 @@ const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN || "";
 
 export const hasDB = !!TURSO_URL;
 
-const db = hasDB
-  ? createClient({ url: TURSO_URL, authToken: TURSO_TOKEN || undefined, intMode: "number" })
-  : null;
+// Cria o client de forma resiliente: se a URL/token estiverem ausentes ou inválidos
+// (ex: env var malformada no build), NÃO derruba o build — db fica null e o app cai
+// no fallback de busca ao vivo. A conexão real só acontece no primeiro execute().
+let db: ReturnType<typeof createClient> | null = null;
+try {
+  if (hasDB) {
+    db = createClient({ url: TURSO_URL, authToken: TURSO_TOKEN || undefined, intMode: "number" });
+  }
+} catch (err) {
+  console.error("[matchStore] Falha ao criar client libSQL (usando fallback ao vivo):", err);
+  db = null;
+}
 
 // Retenção: dias de "sobreposição" após troca de patch antes de apagar o anterior.
 const PATCH_OVERLAP_DAYS = 7;
