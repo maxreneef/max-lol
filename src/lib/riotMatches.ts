@@ -9,7 +9,10 @@ import { DD_BASE } from "@/lib/ddragon";
 import { PLATFORMS } from "@/lib/types";
 
 const API_KEY = process.env.RIOT_API_KEY;
-const REVALIDATE = 30 * 60; // 30 min
+
+// Cache: apenas sucesso (2xx) é cacheado. Erros NUNCA são cacheados.
+// Usamos revalidate por padrão para leituras de client, mas o scan passa cache:false.
+const REVALIDATE = 30 * 60; // 30 min (usado apenas para rotas de leitura do client)
 
 // Mapa label da UI → teamPosition da Riot API
 export const LANE_MAP: Record<string, string> = {
@@ -35,11 +38,81 @@ export function hosts(platform: string) {
   };
 }
 
-export async function riotFetch(url: string): Promise<Response> {
-  return fetch(url, {
-    headers: { "X-Riot-Token": API_KEY! },
-    next: { revalidate: REVALIDATE },
-  });
+/**
+ * Fetch da Riot API com retry automático em erros 5xx e 429 (rate limit).
+ *
+ * - Erros 5xx: até 3 retentativas com backoff exponencial (1s, 2s, 4s).
+ * - Erro 429 (rate limit): espera o Retry-After header ou 10s e tenta de novo (até 3x).
+ * - Erros 4xx (fora 429): NÃO retenta — falha imediata.
+ * - `useCache`: quando false, NÃO usa next.revalidate (scan/robô). Quando true (default),
+ *   usa cache Data Cache do Next.js (30 min) para leituras do site.
+ */
+export async function riotFetch(
+  url: string,
+  opts?: { useCache?: boolean; retries?: number }
+): Promise<Response> {
+  const useCache = opts?.useCache ?? true;
+  const maxRetries = opts?.retries ?? 3;
+
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const fetchOpts: RequestInit = {
+        headers: { "X-Riot-Token": API_KEY! },
+      };
+      // NEXT: só usa cache de 30 min quando useCache=true (leituras do client).
+      // O scan/robô SEMPRE passa useCache=false para não envenenar o cache com erros.
+      if (useCache) {
+        (fetchOpts as Record<string, unknown>).next = { revalidate: REVALIDATE };
+      } else {
+        (fetchOpts as Record<string, unknown>).cache = "no-store";
+      }
+
+      const res = await fetch(url, fetchOpts);
+
+      // Sucesso — retorna imediatamente
+      if (res.ok) return res;
+
+      // Rate limit — espera e retenta
+      if (res.status === 429) {
+        const retryAfter = res.headers.get("Retry-After");
+        const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : 10_000;
+        if (attempt < maxRetries) {
+          console.warn(`[riotFetch] 429 rate limit — aguardando ${waitMs}ms (tentativa ${attempt + 1}/${maxRetries})`);
+          await sleep(waitMs);
+          continue;
+        }
+        return res; // sem retentativas restantes, retorna o 429
+      }
+
+      // Erros 5xx (servidor da Riot) — backoff e retenta
+      if (res.status >= 500 && res.status < 600) {
+        if (attempt < maxRetries) {
+          const backoff = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+          console.warn(`[riotFetch] ${res.status} da Riot — backoff ${backoff}ms (tentativa ${attempt + 1}/${maxRetries})`);
+          await sleep(backoff);
+          continue;
+        }
+        return res; // sem retentativas restantes, retorna o erro 5xx
+      }
+
+      // Erros 4xx (fora 429) — não retenta
+      return res;
+    } catch (err: unknown) {
+      // Erro de rede (DNS, timeout, conexão recusada) — retenta
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < maxRetries) {
+        const backoff = Math.pow(2, attempt) * 1000;
+        console.warn(`[riotFetch] Erro de rede: ${lastError.message} — backoff ${backoff}ms (tentativa ${attempt + 1}/${maxRetries})`);
+        await sleep(backoff);
+        continue;
+      }
+    }
+  }
+
+  // Todas as retentativas falharam
+  throw lastError ?? new Error("[riotFetch] Todas as retentativas falharam");
 }
 
 export async function getChampionNumericId(champName: string): Promise<number | null> {
@@ -62,8 +135,9 @@ export function playerSortKey(p: Player): number {
   return t + d - p.lp;
 }
 
-/** Leaderboard completo (Challenger + GM + Master + Diamond I–IV + Emerald I), ordenado por elo+LP. */
-export async function getLeaderboard(platform: string): Promise<Player[]> {
+/** Leaderboard completo (Challenger + GM + Master + Diamond I–IV + Emerald I), ordenado por elo+LP.
+ *  @param useCache - false para scan/robô (não envenena cache com erros), true (default) para leituras do site. */
+export async function getLeaderboard(platform: string, useCache = true): Promise<Player[]> {
   const { platHost } = hosts(platform);
   const all: Player[] = [];
 
@@ -75,7 +149,7 @@ export async function getLeaderboard(platform: string): Promise<Player[]> {
   const apex = await Promise.all(
     apexTiers.map(async ({ endpoint, tier }) => {
       try {
-        const res = await riotFetch(`${platHost}/lol/league/v4/${endpoint}/by-queue/RANKED_SOLO_5x5`);
+        const res = await riotFetch(`${platHost}/lol/league/v4/${endpoint}/by-queue/RANKED_SOLO_5x5`, { useCache });
         if (!res.ok) return [];
         const data = await res.json();
         const out: Player[] = [];
@@ -100,7 +174,8 @@ export async function getLeaderboard(platform: string): Promise<Player[]> {
     for (let page = 1; page <= maxPages; page++) {
       try {
         const res = await riotFetch(
-          `${platHost}/lol/league/v4/entries/RANKED_SOLO_5x5/${tier === "EMERALD" ? "EMERALD" : "DIAMOND"}/${div}?page=${page}`
+          `${platHost}/lol/league/v4/entries/RANKED_SOLO_5x5/${tier === "EMERALD" ? "EMERALD" : "DIAMOND"}/${div}?page=${page}`,
+          { useCache }
         );
         if (!res.ok) break;
         const entries: Array<{ puuid?: string; leaguePoints?: number }> = await res.json();
@@ -133,17 +208,20 @@ export async function getLeaderboard(platform: string): Promise<Player[]> {
   return all.sort((a, b) => playerSortKey(a) - playerSortKey(b));
 }
 
-/** Busca as match IDs ranqueadas (solo/duo) recentes de um jogador. */
+/** Busca as match IDs ranqueadas (solo/duo) recentes de um jogador.
+ *  @param useCache - false para scan/robô, true (default) para leituras do site. */
 export async function getRankedMatchIds(
   platform: string,
   puuid: string,
   count: number,
-  startTimeSec: number
+  startTimeSec: number,
+  useCache = true
 ): Promise<string[]> {
   const { regHost } = hosts(platform);
   try {
     const res = await riotFetch(
-      `${regHost}/lol/match/v5/matches/by-puuid/${puuid}/ids?queue=420&count=${count}&startTime=${startTimeSec}`
+      `${regHost}/lol/match/v5/matches/by-puuid/${puuid}/ids?queue=420&count=${count}&startTime=${startTimeSec}`,
+      { useCache }
     );
     if (!res.ok) return [];
     const ids: string[] = await res.json();
