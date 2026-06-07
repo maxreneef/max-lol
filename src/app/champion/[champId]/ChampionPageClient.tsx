@@ -1,11 +1,11 @@
 "use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import type { DDChampion, DDChampionFull } from "@/lib/ddragon";
 import { AdBanner } from "@/components/AdUnit";
-import { DataSourceToggle } from "@/components/DataSourceToggle";
 import { RegionFilter } from "@/components/RegionFilter";
 import type {
   ChampionBuildData,
@@ -15,12 +15,12 @@ import type {
   MatchEntry,
 } from "@/lib/mockChampData";
 import { SUMMONER_SPELL_IDS, RUNE_STYLE_IDS, BOOTS_IDS } from "@/lib/riotIds";
-import type { AggregatedBuildData } from "@/lib/buildAggregator";
+import { aggregateBuildData, type RealMatch } from "@/lib/buildAggregator";
 import { PLATFORMS } from "@/lib/types";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const DD_IMG = "https://ddragon.leagueoflegends.com/cdn/15.11.1/img";
+const DD_IMG = `${DD_BASE}/img`;
 const DD_RUNE = "https://ddragon.leagueoflegends.com/cdn/img";
 
 const SPELL_ID: Record<string, string> = {
@@ -37,7 +37,7 @@ const TIER_COLOR: Record<string, string> = {
   "S+": "#0ac8b9", S: "#0ac8b9", A: "#1a9e6e", B: "#c8aa6e", C: "#e06c3b", D: "#e84057",
 };
 
-const TABS = ["Build", "Counters", "One Tricks", "Pro Builds", "Guia"] as const;
+const TABS = ["Build", "Counters", "Pro Builds", "Guia"] as const;
 const LANES = ["Todas", "Top", "Jungle", "Mid", "ADC", "Suporte"] as const;
 type Tab = typeof TABS[number];
 
@@ -194,6 +194,28 @@ function ItemSetList({ sets, showArrows, compact }: { sets: ItemSet[]; showArrow
 
 // ── Lane Filter ──────────────────────────────────────────────────────────────────
 
+function MasteryModeToggle({ mode, onChange }: { mode: "all" | "otp"; onChange: (m: "all" | "otp") => void }) {
+  return (
+    <div className="lane-filter">
+      <span className="lane-filter-label">Modo:</span>
+      <div className="tl-pills">
+        <button
+          className={`tl-pill ${mode === "all" ? "active" : ""}`}
+          onClick={() => onChange("all")}
+        >
+          Todos (High Elo)
+        </button>
+        <button
+          className={`tl-pill ${mode === "otp" ? "active" : ""}`}
+          onClick={() => onChange("otp")}
+        >
+          One-Tricks (500k+)
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LaneFilter({ lane, onChange }: { lane: string; onChange: (l: string) => void }) {
   return (
     <div className="lane-filter">
@@ -231,36 +253,56 @@ function formatRunes(
   return <><span className="match-keystone">{String(r.keystone ?? "")}</span><span className="match-trees">{String(r.primary ?? "")}/{String(r.secondary ?? "")}</span></>;
 }
 
-function BuildTab({ buildData, detail, ddBase, region, lane }: {
+function BuildTab({ buildData, detail, ddBase, region, lane, masteryMode, setMasteryMode }: {
   buildData: ChampionBuildData; detail: DDChampionFull | null; ddBase: string;
   region: string; lane: string;
+  masteryMode: "all" | "otp"; setMasteryMode: (m: "all" | "otp") => void;
 }) {
   const { summonerSpells, skillOrders, startingItems, boots, coreBuilds, fourthItems, fifthItems, sixthItems, matchHistory: mockHistory } = buildData;
   const [expandedMatch, setExpandedMatch] = useState<number | null>(null);
   const [selectedCore, setSelectedCore] = useState(0);
   const [enemyFilter, setEnemyFilter] = useState("");
   const [realMatches, setRealMatches] = useState<MatchEntry[] | null>(null);
+  const [rawApiMatches, setRawApiMatches] = useState<RealMatch[]>([]);
   const [loadingMatches, setLoadingMatches] = useState(false);
-  const [realBuildData, setRealBuildData] = useState<AggregatedBuildData | null>(null);
-  const [loadingBuild, setLoadingBuild] = useState(false);
+  // Build stats calculada de TODAS as partidas do banco (nao so as 200 da tabela)
+  const [buildStats, setBuildStats] = useState<ReturnType<typeof aggregateBuildData> | null>(null);
   const [runeMap, setRuneMap] = useState<Map<number, { name: string; icon: string }>>(new Map());
+  const [runeTrees, setRuneTrees] = useState<Array<{id:number;key:string;icon:string;name:string;slots:Array<{runes:Array<{id:number;key:string;icon:string;name:string}>}>}>>([]);
+  const [visibleMatchCount, setVisibleMatchCount] = useState(10);
+
+  // ── Derivado do modo de maestria (recebido do pai) ──
+  const minMastery = masteryMode === "otp" ? 500000 : 0;
 
   // Monta query params para a API (região real + filtro de rota)
   const apiLane = lane.toLowerCase() === "todas" ? "" : lane.toLowerCase();
+
+  // Reseta paginação quando muda região, rota ou modo
+  useEffect(() => {
+    setVisibleMatchCount(10);
+  }, [region, apiLane, masteryMode]);
 
   // Busca partidas REAIS da Riot API
   useEffect(() => {
     let cancelled = false;
     async function fetchReal() {
+      // Limpa dados antigos imediatamente para feedback visual
+      setRealMatches(null);
+      setRawApiMatches([]);
       setLoadingMatches(true);
       try {
         const laneParam = apiLane ? `&lane=${encodeURIComponent(apiLane)}` : "";
+        const masteryParam = minMastery > 0 ? `&minMastery=${minMastery}` : "";
         const res = await fetch(
-          `/api/champion/${buildData.champId}/matches?region=${region}${laneParam}`
+          `/api/champion/${buildData.champId}/matches?region=${region}${laneParam}${masteryParam}&count=200`
         );
         if (!res.ok) return;
         const data = await res.json();
-        if (!cancelled && data.matches?.length > 0) {
+        if (cancelled) return;
+        // Guarda as partidas cruas para agregar a build localmente (sem chamar /build)
+        const apiMatches = (data.matches ?? []) as RealMatch[];
+        setRawApiMatches(apiMatches);
+        if (apiMatches.length > 0) {
           setRealMatches(data.matches.map((m: Record<string, unknown>) => ({
             matchId: m.matchId as string,
             summonerName: m.summonerName as string,
@@ -285,51 +327,34 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
             csPerMin: (m.csPerMin as number) ?? 0,
             killParticipation: (m.killParticipation as number) ?? 0,
             cs: (m.cs as number) ?? 0,
-          } as MatchEntry & { csPerMin?: number; killParticipation?: number; cs?: number })));
+            allParticipants: (m.allParticipants as Array<{
+              summonerName: string; tagLine: string; championId: string;
+              teamId: number; win: boolean; puuid: string;
+            }>) ?? [],
+          } as MatchEntry & { csPerMin?: number; killParticipation?: number; cs?: number; allParticipants?: Array<{summonerName:string;tagLine:string;championId:string;teamId:number;win:boolean;puuid:string}> })));
         }
       } catch { /* fallback para mock */ }
       finally { if (!cancelled) setLoadingMatches(false); }
     }
     fetchReal();
     return () => { cancelled = true; };
-  }, [buildData.champId, region, apiLane]);
-
-  // Busca dados AGREGADOS de build (runas, itens, feitiços com WR real)
-  useEffect(() => {
-    let cancelled = false;
-    async function fetchBuild() {
-      setLoadingBuild(true);
-      try {
-        const laneParam = apiLane ? `&lane=${encodeURIComponent(apiLane)}` : "";
-        const res = await fetch(
-          `/api/champion/${buildData.champId}/build?region=${region}${laneParam}`
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data.hasRealData) {
-          setRealBuildData(data as AggregatedBuildData);
-        }
-      } catch { /* fallback para mock */ }
-      finally { if (!cancelled) setLoadingBuild(false); }
-    }
-    fetchBuild();
-    return () => { cancelled = true; };
-  }, [buildData.champId, region, apiLane]);
+  }, [buildData.champId, region, apiLane, minMastery]);
 
   // Busca dados de runas do Data Dragon (cache no client via state)
   useEffect(() => {
     let cancelled = false;
-    fetch("https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/runesReforged.json")
+    fetch(`${DD_BASE}/data/pt_BR/runesReforged.json`)
       .then((r) => r.json())
       .then((trees) => {
         if (cancelled) return;
+        setRuneTrees(trees);
         const map = new Map<number, { name: string; icon: string }>();
         for (const tree of trees) {
           for (const slot of tree.slots) {
             for (const rune of slot.runes) {
               map.set(rune.id, {
                 name: rune.name,
-                icon: `perk-images/Styles/${tree.key}/${rune.key}/${rune.key}.png`,
+                icon: rune.icon, // Usa o caminho oficial do DDragon (ex: DEATHFIRE_TOUCH_KEYSTONE.png)
               });
             }
           }
@@ -340,8 +365,35 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
     return () => { cancelled = true; };
   }, []);
 
-  // Usa partidas reais se disponíveis, senão mock
-  const matchHistory = realMatches ?? mockHistory ?? [];
+  // Build stats: busca TODAS as partidas do banco para agregacao completa
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchBuildStats() {
+      try {
+        const laneParam = apiLane ? `&lane=${encodeURIComponent(apiLane)}` : "";
+        const masteryParam = minMastery > 0 ? `&minMastery=${minMastery}` : "";
+        const res = await fetch(
+          `/api/champion/${buildData.champId}/build-stats?region=${region}${laneParam}${masteryParam}`
+        );
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        if (!cancelled && data.hasRealData) {
+          setBuildStats(data as ReturnType<typeof aggregateBuildData>);
+        }
+      } catch {}
+    }
+    fetchBuildStats();
+    return () => { cancelled = true; };
+  }, [buildData.champId, region, apiLane]);
+
+  // Build agregada LOCALMENTE a partir das mesmas partidas (fallback se buildStats nao carregou)
+  const realBuildData = useMemo(
+    () => buildStats ?? (rawApiMatches.length > 0 ? aggregateBuildData(rawApiMatches) : null),
+    [buildStats, rawApiMatches]
+  );
+
+  // Apenas dados REAIS — sem mock/ilusão
+  const matchHistory = realMatches ?? [];
   const isRealData = realMatches !== null && realMatches.length > 0;
   const isBuildReal = realBuildData !== null && realBuildData.hasRealData;
 
@@ -398,187 +450,48 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
   return (
     <div className="tab-content">
 
-      {/* ═══ 1. FEITIÇOS (pequeno, minimalista) ═══ */}
-      <div className="build-spells-mini">
-        <span className="build-label-mini">Feitiços</span>
-        <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
-          {realSpells ? (
-            realSpells.map((s, i) => (
+      {/* ═══ 1. FEITIÇOS (apenas dados reais) ═══ */}
+      {realSpells && realSpells.length > 0 && (
+        <div className="build-spells-mini">
+          <span className="build-label-mini">Feitiços</span>
+          <div style={{display:"flex",gap:"0.75rem",flexWrap:"wrap"}}>
+            {realSpells.map((s, i) => (
               <div key={i} style={{display:"flex",alignItems:"center",gap:"0.3rem"}}>
                 <img src={`${DD_IMG}/spell/${s.spell1Icon}.png`} alt={s.spell1Name} width={24} height={24} className="item-icon" />
                 <img src={`${DD_IMG}/spell/${s.spell2Icon}.png`} alt={s.spell2Name} width={24} height={24} className="item-icon" />
                 <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{s.pickRate}%</span>
                 <WRBadge wr={s.winRate} />
               </div>
-            ))
-          ) : (
-            summonerSpells.slice(0, 2).map((set, i) => (
-              <div key={i} style={{display:"flex",alignItems:"center",gap:"0.3rem"}}>
-                {set.spells.map((sp) => <SpellIcon key={sp} spell={sp} size={24} />)}
-                <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>{set.pickRate}%</span>
-                <WRBadge wr={set.winRate} />
-              </div>
-            ))
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+      {(!realSpells || realSpells.length === 0) && isBuildReal && (
+        <div className="build-spells-mini">
+          <span className="build-label-mini">Feitiços</span>
+          <span className="muted-sm">Sem dados de feitiços.</span>
+        </div>
+      )}
 
-      {/* ═══ 2. RUNAS — árvore visual completa ═══ */}
-      <section className="build-section">
-        <h3 className="build-section-title">Runas</h3>
-        {realBuildData ? (
-          /* ── Runas REAIS (agregadas de partidas) ── */
-          realBuildData.primaryStyles.slice(0, 2).map((primary, idx) => {
-            const pStyle = RUNE_STYLE_IDS[primary.styleId] ?? { name: `Estilo ${primary.styleId}`, color: "#888" };
-            const subStyleId = realBuildData.subStyles[idx]?.styleId ?? 0;
-            const subStyle = RUNE_STYLE_IDS[subStyleId] ?? { name: `Estilo ${subStyleId}`, color: "#888" };
-            const keystone = realBuildData.keystones.find((k) => {
-              // Associa keystone à árvore primária (simplificado: pega o mais popular)
-              return true;
-            });
-            const topKeystones = realBuildData.keystones
-              .filter((k) => runeMap.has(k.runeId))
-              .slice(0, 1);
-            const keystoneRune = topKeystones[0];
-            const keystoneInfo = keystoneRune ? runeMap.get(keystoneRune.runeId) : null;
-
-            return (
-              <div key={idx} className="rune-tree-full">
-                <div className="rune-tree-full-header">
-                  <span style={{color: pStyle.color, fontWeight: 700}}>{pStyle.name}</span>
-                  <span style={{color: "var(--muted)", fontSize: "0.65rem"}}>+ {subStyle.name}</span>
-                  <span style={{marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center"}}>
-                    <span className="pick-rate-badge">{primary.pickRate}%</span>
-                    <WRBadge wr={primary.winRate} />
-                  </span>
-                </div>
-                <div className="rune-tree-visual">
-                  <div className="rune-tree-col">
-                    <div className="rune-tree-col-label" style={{color: pStyle.color}}>Primária</div>
-                    {keystoneInfo && keystoneRune && (
-                      <div className="rune-keystone-big">
-                        <RuneIcon path={keystoneInfo.icon} size={48} />
-                        <div className="rune-keystone-info">
-                          <span className="rune-keystone-name">{keystoneInfo.name}</span>
-                          <span style={{fontSize: "0.62rem", color: "var(--muted)"}}>{keystoneRune.pickRate}%</span>
-                        </div>
-                      </div>
-                    )}
-                    {!keystoneInfo && (
-                      <div className="rune-keystone-big" style={{opacity: 0.5, padding: "0.5rem", fontSize: "0.72rem", color: "var(--muted)"}}>
-                        Keystone ID: {realBuildData.keystones[0]?.runeId ?? "—"}
-                      </div>
-                    )}
-                    {/* Slots 1-3 da árvore primária (dados reais agregados) */}
-                    <div className="rune-slots-row" style={{marginTop: "0.3rem"}}>
-                      {(realBuildData.primarySlots ?? []).map((slotOpts, si) => {
-                        const topRune = slotOpts[0];
-                        if (!topRune) return null;
-                        const ri = runeMap.get(topRune.runeId);
-                        return ri ? (
-                          <div key={si} className="rune-slot-mini">
-                            <RuneIcon path={ri.icon} size={28} />
-                            <span className="rune-slot-mini-name">{ri.name}</span>
-                            <span style={{fontSize: "0.6rem", color: "var(--muted)"}}>{topRune.pickRate}%</span>
-                          </div>
-                        ) : (
-                          <div key={si} className="rune-slot-mini" style={{opacity:0.4}}>
-                            <span style={{fontSize:"0.6rem"}}>#{topRune.runeId}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="rune-tree-col rune-tree-col-sec">
-                    <div className="rune-tree-col-label">Secundária</div>
-                    <div className="rune-slots-sec">
-                      {(realBuildData.subSlots ?? []).map((slotOpts, si) => {
-                        const topRune = slotOpts[0];
-                        if (!topRune) return null;
-                        const ri = runeMap.get(topRune.runeId);
-                        return ri ? (
-                          <div key={si} className="rune-slot-mini">
-                            <RuneIcon path={ri.icon} size={28} />
-                            <span className="rune-slot-mini-name">{ri.name}</span>
-                            <span style={{fontSize: "0.6rem", color: "var(--muted)"}}>{topRune.pickRate}%</span>
-                          </div>
-                        ) : (
-                          <div key={si} className="rune-slot-mini" style={{opacity:0.4}}>
-                            <span style={{fontSize:"0.6rem"}}>#{topRune.runeId}</span>
-                          </div>
-                        );
-                      })}
-                      {(realBuildData.subSlots ?? []).every(s => s.length === 0) && (
-                        <span style={{fontSize: "0.68rem", color: "var(--muted)", padding: "0.3rem"}}>
-                          {subStyle.name}
-                          {subStyleId !== 0 && ` · ${realBuildData.subStyles.find(s => s.styleId === subStyleId)?.pickRate ?? "—"}%`}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          /* ── Runas MOCK (fallback) ── */
-          buildData.runeSetups.slice(0, 2).map((setup, i) => (
-            <div key={i} className="rune-tree-full">
-              <div className="rune-tree-full-header">
-                <span style={{color:setup.primaryTreeColor,fontWeight:700}}>{setup.primaryTree}</span>
-                <span style={{color:"var(--muted)",fontSize:"0.65rem"}}>+ {setup.secondaryTree}</span>
-                <span style={{marginLeft:"auto",display:"flex",gap:"0.5rem",alignItems:"center"}}>
-                  <span className="pick-rate-badge">{setup.pickRate}%</span>
-                  <WRBadge wr={setup.winRate} />
-                </span>
-              </div>
-              <div className="rune-tree-visual">
-                <div className="rune-tree-col">
-                  <div className="rune-tree-col-label" style={{color:setup.primaryTreeColor}}>Primária</div>
-                  <div className="rune-keystone-big">
-                    <RuneIcon path={setup.keystone.icon} size={48} />
-                    <div className="rune-keystone-info">
-                      <span className="rune-keystone-name">{setup.keystone.name}</span>
-                      <span style={{fontSize:"0.62rem",color:"var(--muted)"}}>{setup.keystone.pickRate}%</span>
-                    </div>
-                  </div>
-                  <div className="rune-slots-row">
-                    {[setup.slot1, setup.slot2, setup.slot3].map((rune, si) => (
-                      <div key={si} className="rune-slot-mini">
-                        <RuneIcon path={rune.icon} size={32} />
-                        <span className="rune-slot-mini-name">{rune.name}</span>
-                        <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="rune-tree-col rune-tree-col-sec">
-                  <div className="rune-tree-col-label">Secundária</div>
-                  <div className="rune-slots-sec">
-                    {[setup.secondary1, setup.secondary2].map((rune, si) => (
-                      <div key={si} className="rune-slot-mini">
-                        <RuneIcon path={rune.icon} size={32} />
-                        <span className="rune-slot-mini-name">{rune.name}</span>
-                        <span style={{fontSize:"0.6rem",color:"var(--muted)"}}>{rune.pickRate}%</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rune-shards-row">
-                    <span className="rune-shard-badge">{setup.shard1}</span>
-                    <span className="rune-shard-badge">{setup.shard2}</span>
-                    <span className="rune-shard-badge">{setup.shard3}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </section>
+      {/* ═══ 2. RUNAS — árvore visual interativa (múltiplas páginas) ═══ */}
+      {realBuildData && (
+        <section className="build-section">
+          <h3 className="build-section-title">Runas</h3>
+          <RuneTreePages realBuildData={realBuildData} runeMap={runeMap} runeTrees={runeTrees} rawMatches={rawApiMatches} />
+        </section>
+      )}
+      {!realBuildData && (
+        <section className="build-section">
+          <h3 className="build-section-title">Runas</h3>
+          <p className="muted-sm">Sem dados reais de runas.</p>
+        </section>
+      )}
 
       {/* ═══ 3. ORDEM DE SKILLS — 18 níveis ═══ */}
-      <section className="build-section">
-        <h3 className="build-section-title">Ordem de Habilidades</h3>
-        {skillOrders.slice(0, 2).map((so, idx) => (
+      {skillOrders && skillOrders.length > 0 && (
+        <section className="build-section">
+          <h3 className="build-section-title">Ordem de Habilidades</h3>
+          {skillOrders.slice(0, 2).map((so, idx) => (
           <div key={idx} className="skill-order-full">
             <div className="skill-order-full-header">
               <span className="skill-ab-big" style={{background: ABILITY_COLORS[so.maxFirst] + "22", color: ABILITY_COLORS[so.maxFirst], border: `1px solid ${ABILITY_COLORS[so.maxFirst]}55`}}>
@@ -608,7 +521,8 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
             </div>
           </div>
         ))}
-      </section>
+        </section>
+      )}
 
       {/* ═══ 4. ITENS — fluxo contínuo ═══ */}
       <section className="build-section">
@@ -632,17 +546,7 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
                   </div>
                 ))
               ) : (
-                startingItems.slice(0, 3).map((set, i) => (
-                  <div key={i} className="items-flow-option">
-                    <div className="items-flow-icons">
-                      {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
-                    </div>
-                    <div className="items-flow-stats">
-                      <span className="pick-rate-badge">{set.pickRate}%</span>
-                      <WRBadge wr={set.winRate} />
-                    </div>
-                  </div>
-                ))
+                <span className="muted-sm">Sem dados de itens iniciais.</span>
               )}
             </div>
           </div>
@@ -666,17 +570,7 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
                   </div>
                 ))
               ) : (
-                boots.slice(0, 3).map((set, i) => (
-                  <div key={i} className="items-flow-option">
-                    <div className="items-flow-icons">
-                      {set.items.map((id) => <ItemIcon key={id} id={id} size={32} />)}
-                    </div>
-                    <div className="items-flow-stats">
-                      <span className="pick-rate-badge">{set.pickRate}%</span>
-                      <WRBadge wr={set.winRate} />
-                    </div>
-                  </div>
-                ))
+                <span className="muted-sm">Sem dados de botas.</span>
               )}
             </div>
           </div>
@@ -704,70 +598,9 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
             </div>
           </div>
         ) : (
-          <>
-            <div className="items-flow" style={{marginTop:"0.75rem"}}>
-              <div className="items-flow-block items-flow-block-wide">
-                <span className="items-flow-label">Build Principal (clique para expandir)</span>
-                <div className="items-flow-options">
-                  {coreBuilds.slice(0, 3).map((set, i) => (
-                    <button
-                      key={i}
-                      className={`items-flow-option items-flow-clickable ${selectedCore===i?"selected":""}`}
-                      onClick={() => setSelectedCore(i)}
-                    >
-                      <div className="items-flow-icons">
-                        {set.items.slice(0, 2).map((id) => <ItemIcon key={id} id={id} size={36} />)}
-                      </div>
-                      <div className="items-flow-stats">
-                        <span className="pick-rate-badge">{set.pickRate}%</span>
-                        <WRBadge wr={set.winRate} />
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Itens seguintes baseados na core selecionada */}
-              {selectedCore !== null && (
-                <>
-                  <span className="items-flow-arrow">→</span>
-                  <div className="items-flow-block">
-                    <span className="items-flow-label">3° Item</span>
-                    <div className="items-flow-options">
-                      {fourthItems.slice(0, 3).map((set, i) => (
-                        <div key={i} className="items-flow-option">
-                          <div className="items-flow-icons">
-                            {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
-                          </div>
-                          <div className="items-flow-stats">
-                            <span className="pick-rate-badge">{set.pickRate}%</span>
-                            <WRBadge wr={set.winRate} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <span className="items-flow-arrow">→</span>
-                  <div className="items-flow-block">
-                    <span className="items-flow-label">4°–5°</span>
-                    <div className="items-flow-options">
-                      {fifthItems.slice(0, 3).map((set, i) => (
-                        <div key={i} className="items-flow-option">
-                          <div className="items-flow-icons">
-                            {set.items.slice(0, 1).map((id) => <ItemIcon key={id} id={id} size={32} />)}
-                          </div>
-                          <div className="items-flow-stats">
-                            <span className="pick-rate-badge">{set.pickRate}%</span>
-                            <WRBadge wr={set.winRate} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </>
+          <div className="items-flow" style={{marginTop:"0.75rem"}}>
+            <span className="muted-sm">Sem dados de build principal.</span>
+          </div>
         )}
       </section>
 
@@ -804,44 +637,69 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
         <section className="build-section">
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:"0.5rem",marginBottom:"0.5rem"}}>
             <h3 className="build-section-title" style={{margin:0}}>Partidas Recentes — Monochampions</h3>
-            <div style={{display:"flex",alignItems:"center",gap:"0.75rem",flexWrap:"wrap"}}>
-              <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
-                {wins}V/{total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas
-              </span>
-              <Link
-                href={`/champion/${buildData.champId}/partidas?region=${region}${apiLane ? `&lane=${apiLane}` : ""}`}
-                className="ver-todas-link"
-              >
-                Ver todas ↗
-              </Link>
-            </div>
+            <span style={{fontSize:"0.72rem",color:"var(--muted)"}}>
+              {wins}V/{total-wins}D · WR {(wins/total*100).toFixed(1)}% · {total} partidas
+            </span>
           </div>
           <p className="muted-sm" style={{marginBottom:"0.5rem"}}>
             {isRealData ? (
-              <>✅ Dados REAIS da Riot API — {total} partidas de jogadores do topo do leaderboard.{" "}
-              {isBuildReal && <>✅ Build calculada de {realBuildData!.totalGames} partidas reais.</>}
-              </>
+              masteryMode === "otp" ? (
+                <>🔷 Dados REAIS de <strong>One-Tricks</strong> (500k+ maestria) — {total} partidas.{" "}
+                {isBuildReal && <>Build calculada de {realBuildData!.totalGames} partidas.</>}
+                </>
+              ) : (
+                <>✅ Dados REAIS do <strong>High Elo</strong> (Challenger a Diamante) — {total} partidas.{" "}
+                {isBuildReal && <>Build calculada de {realBuildData!.totalGames} partidas.</>}
+                </>
+              )
             ) : loadingMatches ? (
-              "⏳ Buscando partidas reais da Riot API..."
+              <span className="loading-indicator" style={{display:"inline-flex",padding:0}}>
+                {masteryMode === "otp" ? "Buscando one-tricks (500k+)..." : "Buscando partidas..."}
+                <span className="loading-dot" />
+                <span className="loading-dot" />
+                <span className="loading-dot" />
+              </span>
             ) : (
-              "⚠️ Dados de demonstração. Configure a Riot API Key para ver partidas reais."
+              "⚠️ Sem dados reais disponíveis para este campeão."
             )}
           </p>
 
           <div className="matches-table-wrap">
             <table className="matches-table">
               <thead>
-                <tr><th>Jogador</th><th>Elo</th><th>Reg</th><th>Res</th><th>KDA</th><th>CS/min</th><th>P/Kill%</th><th>Itens</th><th>Runas</th><th>Skills</th><th>Dur</th></tr>
+                <tr><th>Jogador</th><th>Elo</th><th>Data</th><th>Res</th><th>KDA</th><th>CS/min</th><th>P/Kill%</th><th>Itens</th><th>Runas</th><th>Skills</th><th>Dur</th></tr>
               </thead>
               <tbody>
-                {filteredMatches.slice(0, 20).map((m, i) => {
+                {loadingMatches && matchHistory.length === 0 && (
+                  Array.from({length: 5}).map((_, i) => (
+                    <tr key={i} style={{opacity: 0.3 + (5-i) * 0.1}}>
+                      <td><div className="skeleton" style={{height:14,width:80}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:50}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:40}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:20}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:60}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:45}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:35}} /></td>
+                      <td><div className="skeleton" style={{height:20,width:120}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:80}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:100}} /></td>
+                      <td><div className="skeleton" style={{height:14,width:35}} /></td>
+                    </tr>
+                  ))
+                )}
+                {(!loadingMatches || matchHistory.length > 0) && filteredMatches.slice(0, visibleMatchCount).map((m, i) => {
                   const FLG: Record<string, string> = { br1:"🇧🇷", kr:"🇰🇷", euw1:"🇪🇺", na1:"🇺🇸", oc1:"🇦🇺" };
                   const mExt = m as MatchEntry & { csPerMin?: number; killParticipation?: number; cs?: number };
+                  // Formata data da partida
+                  const matchDate = m.gameCreation ? new Date(m.gameCreation) : null;
+                  const dateStr = matchDate
+                    ? `${String(matchDate.getDate()).padStart(2,"0")}/${String(matchDate.getMonth()+1).padStart(2,"0")}/${matchDate.getFullYear()} ${String(matchDate.getHours()).padStart(2,"0")}:${String(matchDate.getMinutes()).padStart(2,"0")}`
+                    : "—";
                   return (
                     <tr key={i} className={m.win?"match-row-win":"match-row-loss"} style={{cursor:"pointer"}} onClick={() => setExpandedMatch(expandedMatch===i?null:i)}>
                       <td><span className="match-player-name">{m.summonerName}</span><span className="match-player-tag" style={{marginLeft:4}}>#{m.tagLine}</span></td>
                       <td><span className="match-tier">{m.tier}</span></td>
-                      <td>{FLG[m.platform]??"🌐"}</td>
+                      <td className="muted-sm" style={{fontSize:"0.68rem"}}>{dateStr}</td>
                       <td><span className={`match-result ${m.win?"win":"loss"}`}>{m.win?"V":"D"}</span></td>
                       <td><span className="match-kda">{m.kda}</span></td>
                       <td className="muted-sm" style={{fontSize:"0.68rem"}}>
@@ -862,7 +720,15 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
                         </div>
                       </td>
                       <td><div className="match-runes-info">{formatRunes(m.runes, runeMap, isRealData)}</div></td>
-                      <td><span className="match-skill-order">{m.skillOrder}</span></td>
+                      <td>
+                        {m.skillOrder ? (
+                          <span style={{fontSize:"0.55rem",fontWeight:700,letterSpacing:1}}>
+                            {m.skillOrder.split("").map((l,j) => (
+                              <span key={j} style={{color: ABILITY_COLORS[l] || "var(--muted)"}}>{l}</span>
+                            ))}
+                          </span>
+                        ) : <span className="muted-sm">—</span>}
+                      </td>
                       <td className="muted-sm">{m.gameDuration}</td>
                     </tr>
                   );
@@ -871,8 +737,20 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
             </table>
           </div>
 
+          {/* Botão Ver mais — carrega 10 a mais sem mudar de aba */}
+          {!loadingMatches && filteredMatches.length > visibleMatchCount && (
+            <div style={{textAlign:"center",marginTop:"0.75rem"}}>
+              <button
+                className="ver-mais-btn"
+                onClick={() => setVisibleMatchCount((n) => n + 10)}
+              >
+                Ver mais · {filteredMatches.length - visibleMatchCount} restantes
+              </button>
+            </div>
+          )}
+
           {expandedMatch !== null && matchHistory[expandedMatch] && (
-            <MatchDetail match={matchHistory[expandedMatch]} champId={buildData.champId} onClose={() => setExpandedMatch(null)} />
+            <MatchDetail match={matchHistory[expandedMatch]} champId={buildData.champId} onClose={() => setExpandedMatch(null)} runeMap={runeMap} />
           )}
         </section>
       )}
@@ -882,27 +760,412 @@ function BuildTab({ buildData, detail, ddBase, region, lane }: {
 
 // ── Match Detail Panel ──────────────────────────────────────────────────────────
 
-function MatchDetail({ match, champId, onClose }: { match: MatchEntry; champId: string; onClose: () => void }) {
-  // Mock determinístico pra cada partida baseado no matchId
-  const seed = match.matchId.charCodeAt(match.matchId.length-1);
-  const allyPool = ["Lee Sin","Viego","Sejuani","Jarvan IV","Xin Zhao","Ahri","Syndra","Orianna","Jinx","Caitlyn","Nautilus","Thresh","Lulu","Braum"];
-  const enemyPool = ["Darius","K'Sante","Renekton","Garen","Zed","Akali","LeBlanc","Fizz","Vayne","Draven","Leona","Blitzcrank","Pyke","Morgana"];
-  function pick(arr: string[], idx: number) { return arr[idx % arr.length]; }
+function SpellIconById({ spellId, size = 28 }: { spellId: number | string; size?: number }) {
+  const id = typeof spellId === "string" ? parseInt(spellId, 10) : spellId;
+  const info = SUMMONER_SPELL_IDS[id] ?? { name: String(id), icon: `Summoner${id}` };
+  return (
+    <img
+      src={`${DD_IMG}/spell/${info.icon}.png`}
+      alt={info.name}
+      width={size}
+      height={size}
+      className="item-icon"
+      title={info.name}
+      onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.2"; }}
+    />
+  );
+}
 
-  const allyTeam = [
-    { name: match.summonerName, champId },
-    { name: "AliadoJG",  champId: pick(allyPool, seed+1) },
-    { name: "AliadoMid", champId: pick(allyPool, seed+2) },
-    { name: "AliadoADC", champId: pick(allyPool, seed+3) },
-    { name: "AliadoSup", champId: pick(allyPool, seed+4) },
-  ];
-  const enemyTeam = [
-    { name: "InimigoTop", champId: pick(enemyPool, seed+5) },
-    { name: "InimigoJG",  champId: pick(enemyPool, seed+6) },
-    { name: "InimigoMid", champId: pick(enemyPool, seed+7) },
-    { name: "InimigoADC", champId: pick(enemyPool, seed+8) },
-    { name: "InimigoSup", champId: pick(enemyPool, seed+9) },
-  ];
+/** Arvore de runas interativa — permite alternar entre as top 4 paginas mais populares */
+/** Uma página de runa completa (keystone + runas primárias + secundária + runas secundárias) */
+interface RuneSet {
+  keystoneId: number;
+  primaryRunes: number[]; // [slot1, slot2, slot3]
+  subStyleId: number;
+  subRunes: number[];     // [runa1, runa2]
+  pickRate: number;
+  winRate: number;
+  count: number;
+}
+
+function RuneTreePages({ realBuildData, runeMap, runeTrees, rawMatches }: {
+  realBuildData: NonNullable<ReturnType<typeof aggregateBuildData>>;
+  runeMap: Map<number, { name: string; icon: string }>;
+  runeTrees: Array<{id:number;key:string;icon:string;name:string;slots:Array<{runes:Array<{id:number;key:string;icon:string;name:string}>}>}>;
+  rawMatches: RealMatch[];
+}) {
+  const NUM_PAGES = Math.min(4, realBuildData.primaryStyles.length);
+  const [selected, setSelected] = useState(0);
+
+  const primaryStyle = realBuildData.primaryStyles[selected];
+  const pStyle = RUNE_STYLE_IDS[primaryStyle?.styleId ?? 0] ?? { name: "Desconhecido", color: "#888" };
+
+  // ── SETs: páginas de runa completas da árvore primária selecionada ──
+  // SET 1 = a mais usada (define o keystone). SET 2-4 = próximas mais usadas
+  // mantendo o MESMO keystone do SET 1 (variam as runas menores e a secundária).
+  const { sets, runePickRate } = useMemo(() => {
+    const styleId = primaryStyle?.styleId ?? 0;
+    // % de uso individual de cada runa — base nos agregados (consistente c/ o resto da página)
+    const rpr = new Map<number, number>();
+    for (const k of realBuildData.keystones) rpr.set(k.runeId, k.pickRate);
+    for (const slot of realBuildData.primarySlots) for (const r of slot) rpr.set(r.runeId, Math.max(rpr.get(r.runeId) ?? 0, r.pickRate));
+    for (const slot of realBuildData.subSlots) for (const r of slot) rpr.set(r.runeId, Math.max(rpr.get(r.runeId) ?? 0, r.pickRate));
+
+    // Fallback: sem partidas cruas, deriva 1 SET dos agregados de realBuildData
+    const buildFallbackSet = (): RuneSet | null => {
+      const tree = runeTrees.find((t) => t.id === styleId);
+      const kIds = new Set((tree?.slots[0]?.runes ?? []).map((r) => r.id));
+      const ks = realBuildData.keystones.find((k) => kIds.has(k.runeId)) ?? realBuildData.keystones[0];
+      if (!ks) return null;
+      return {
+        keystoneId: ks.runeId,
+        primaryRunes: realBuildData.primarySlots.map((s) => s[0]?.runeId).filter((x): x is number => !!x),
+        subStyleId: realBuildData.subStyles[0]?.styleId ?? 0,
+        subRunes: realBuildData.subSlots.map((s) => s[0]?.runeId).filter((x): x is number => !!x),
+        pickRate: ks.pickRate, winRate: ks.winRate, count: ks.count,
+      };
+    };
+
+    if (!styleId) return { sets: [] as RuneSet[], runePickRate: rpr };
+
+    const totalAll = rawMatches.length || realBuildData.totalGames || 1;
+    const primaryMatches = rawMatches.filter((m) => m.primaryStyle === styleId);
+    if (primaryMatches.length === 0) {
+      const fb = buildFallbackSet();
+      return { sets: fb ? [fb] : [], runePickRate: rpr };
+    }
+
+    // % individual preciso a partir das partidas cruas (sobre o total geral)
+    const runeCount = new Map<number, number>();
+    for (const m of primaryMatches) {
+      const ids = new Set<number>([...(m.runeSelections ?? []), ...(m.subSelections ?? [])].filter((x) => x > 0));
+      for (const id of ids) runeCount.set(id, (runeCount.get(id) ?? 0) + 1);
+    }
+    for (const [id, c] of runeCount) rpr.set(id, +((c / totalAll) * 100).toFixed(1));
+
+    // Agrupa por página de runa completa
+    const pageMap = new Map<string, { count: number; wins: number; sample: RealMatch }>();
+    for (const m of primaryMatches) {
+      const sel = m.runeSelections ?? [];
+      const sub = m.subSelections ?? [];
+      if (sel.length < 4 || sub.length < 2 || !m.subStyle) continue;
+      // Normaliza a ordem (a Riot não garante a ordem das runas) p/ não duplicar páginas iguais
+      const primKey = [sel[1], sel[2], sel[3]].slice().sort((a, b) => a - b).join(",");
+      const subKey = [sub[0], sub[1]].slice().sort((a, b) => a - b).join(",");
+      const key = `${m.primaryRuneId}|${primKey}|${m.subStyle}|${subKey}`;
+      const e = pageMap.get(key) ?? { count: 0, wins: 0, sample: m };
+      e.count++;
+      if (m.win) e.wins++;
+      pageMap.set(key, e);
+    }
+    const pages = [...pageMap.values()].sort((a, b) => b.count - a.count);
+    if (pages.length === 0) {
+      const fb = buildFallbackSet();
+      return { sets: fb ? [fb] : [], runePickRate: rpr };
+    }
+
+    // SET 1 define o keystone; SET 2-4 mantêm o mesmo keystone (1ª linha não troca)
+    const keystone1 = pages[0].sample.primaryRuneId;
+    const chosen = pages.filter((p) => p.sample.primaryRuneId === keystone1).slice(0, 4);
+    const sets: RuneSet[] = chosen.map((p) => {
+      const m = p.sample;
+      return {
+        keystoneId: m.primaryRuneId,
+        primaryRunes: [m.runeSelections[1], m.runeSelections[2], m.runeSelections[3]],
+        subStyleId: m.subStyle,
+        subRunes: [m.subSelections[0], m.subSelections[1]],
+        pickRate: +((p.count / totalAll) * 100).toFixed(1),
+        winRate: +((p.wins / p.count) * 100).toFixed(1),
+        count: p.count,
+      };
+    });
+    return { sets, runePickRate: rpr };
+  }, [primaryStyle?.styleId, rawMatches, realBuildData, runeTrees]);
+
+  // SET selecionado (reseta ao trocar de árvore primária)
+  const [selectedSet, setSelectedSet] = useState(0);
+  useEffect(() => { setSelectedSet(0); }, [primaryStyle?.styleId, sets.length]);
+  const activeSet = sets[selectedSet] ?? sets[0] ?? null;
+
+  // Derivados do SET ativo (usados na renderização das árvores)
+  const subStyleId = activeSet?.subStyleId ?? realBuildData.subStyles[0]?.styleId ?? 0;
+  const sStyle = RUNE_STYLE_IDS[subStyleId] ?? { name: "Desconhecido", color: "#888" };
+  const primaryTree = runeTrees.find((t) => t.id === (primaryStyle?.styleId ?? 0));
+  const subTree = runeTrees.find((t) => t.id === subStyleId);
+  const keystoneInfo = activeSet ? runeMap.get(activeSet.keystoneId) : null;
+  const highlightedPrimary = new Set<number>(activeSet?.primaryRunes ?? []);
+  const highlightedSub = new Set<number>(activeSet?.subRunes ?? []);
+
+  return (
+    <div>
+      {/* Pills para alternar entre paginas */}
+      <div style={{display:"flex",gap:6,marginBottom:"0.75rem",flexWrap:"wrap"}}>
+        {Array.from({length: NUM_PAGES}, (_, i) => {
+          const p = realBuildData.primaryStyles[i];
+          const s = RUNE_STYLE_IDS[p?.styleId ?? 0];
+          const ptree = runeTrees.find((t) => t.id === (p?.styleId ?? 0));
+          const kIds = new Set((ptree?.slots[0]?.runes ?? []).map((r) => r.id));
+          const k = realBuildData.keystones.find((ks) => kIds.has(ks.runeId));
+          const ki = k ? runeMap.get(k.runeId) : null;
+          return (
+            <button key={i} onClick={() => setSelected(i)} className={`tl-pill ${selected === i ? "active" : ""}`}
+              style={{borderColor: selected === i ? (s?.color || "#888") : undefined}}>
+              {ki && <RuneIcon path={ki.icon} size={18} />}
+              <span style={{fontSize:"0.68rem",fontWeight:600,color:s?.color}}>{s?.name ?? `#${p?.styleId}`}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Cabecalho */}
+      <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:"0.6rem",flexWrap:"wrap"}}>
+        {keystoneInfo && <RuneIcon path={keystoneInfo.icon} size={22} />}
+        <span style={{color: pStyle.color, fontWeight: 700, fontSize: "0.85rem"}}>{keystoneInfo?.name ?? pStyle.name}</span>
+        <span style={{color: "var(--muted)", fontSize: "0.7rem"}}>{pStyle.name} + {sStyle.name}</span>
+        <span style={{marginLeft: "auto", display: "flex", gap: "0.5rem", alignItems: "center"}}>
+          <span className="pick-rate-badge">{activeSet?.pickRate ?? primaryStyle?.pickRate ?? 0}%</span>
+          <WRBadge wr={activeSet?.winRate ?? primaryStyle?.winRate ?? 0} />
+        </span>
+      </div>
+
+      {/* Arvore visual: lado a lado (primaria + secundaria) */}
+      <div style={{display:"flex",gap:"1.5rem",flexWrap:"wrap"}}>
+        {/* ── PRIMARIA (4 slots: keystone + 3) ── */}
+        <div style={{flex:2,minWidth:220,background:"var(--panel)",borderRadius:10,border:"1px solid var(--border)",padding:"0.75rem"}}>
+          <div style={{fontSize:"0.62rem",textTransform:"uppercase",letterSpacing:"0.05em",color: pStyle.color,fontWeight:600,marginBottom:"0.5rem"}}>
+            Primaria — {pStyle.name}
+          </div>
+          {primaryTree ? (
+            primaryTree.slots.map((slot, si) => {
+              const isKeystoneRow = si === 0;
+              // Destaca as runas do SET ativo: keystone na 1ª linha, escolhidas nas demais
+              const runeEntries = slot.runes.map((rune) => {
+                const isPopular = isKeystoneRow
+                  ? rune.id === (activeSet?.keystoneId ?? 0)
+                  : highlightedPrimary.has(rune.id);
+                const ri = runeMap.get(rune.id);
+                return { rune, isPopular, pickRate: runePickRate.get(rune.id) ?? 0, icon: ri?.icon ?? "", name: ri?.name ?? "" };
+              });
+              return (
+                <div key={si} style={{marginBottom: si < 3 ? 0 : 0}}>
+                  {runeEntries.map((entry, ri) => (
+                    <span key={ri} style={{
+                      display:"inline-flex",flexDirection:"column",alignItems:"center",
+                      margin: isKeystoneRow ? "0 5px 6px 5px" : "0 4px 4px 4px",
+                      opacity: entry.isPopular ? 1 : 0.25,
+                      transition:"opacity 0.2s",
+                    }} title={entry.name ? `${entry.name}${entry.isPopular ? ` — ${entry.pickRate}%` : ""}` : ""}>
+                      <img
+                        src={`https://ddragon.leagueoflegends.com/cdn/img/${entry.rune.icon}`}
+                        alt=""
+                        width={isKeystoneRow ? 36 : 28}
+                        height={isKeystoneRow ? 36 : 28}
+                        style={{
+                          borderRadius:"50%",
+                          border: entry.isPopular ? `2px solid ${pStyle.color}` : "1px solid transparent",
+                          background: entry.isPopular ? `${pStyle.color}22` : "transparent",
+                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.1"; }}
+                      />
+                      {entry.isPopular && (
+                        <span style={{fontSize:"0.55rem",color:"var(--muted)",marginTop:1,fontWeight:600}}>
+                          {entry.pickRate}%
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                  {/* Conector visual entre slots (exceto ultimo) */}
+                  {si < 3 && (
+                    <div style={{height:6,opacity:0.15}}>
+                      <div style={{margin:"0 auto",width:1,height:"100%",background:pStyle.color}} />
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <span className="muted-sm">Árvore não encontrada</span>
+          )}
+        </div>
+
+        {/* ── SECUNDARIA (2 slots) ── */}
+        <div style={{flex:1,minWidth:140,background:"var(--panel)",borderRadius:10,border:"1px solid var(--border)",padding:"0.75rem",opacity: subTree ? 1 : 0.4}}>
+          <div style={{fontSize:"0.62rem",textTransform:"uppercase",letterSpacing:"0.05em",color: sStyle.color,fontWeight:600,marginBottom:"0.5rem"}}>
+            Secundaria — {sStyle.name}
+          </div>
+          {subTree ? (
+            subTree.slots.slice(1, 4).map((slot, si) => {
+              const runeEntries = slot.runes.map((rune) => {
+                const isPopular = highlightedSub.has(rune.id);
+                const ri = runeMap.get(rune.id);
+                return { rune, isPopular, pickRate: runePickRate.get(rune.id) ?? 0, icon: ri?.icon ?? "", name: ri?.name ?? "" };
+              });
+              return (
+                <div key={si} style={{marginBottom:4}}>
+                  {runeEntries.map((entry, ri) => (
+                    <span key={ri} style={{
+                      display:"inline-flex",flexDirection:"column",alignItems:"center",
+                      margin:"0 4px 4px 4px",
+                      opacity: entry.isPopular ? 1 : 0.25,
+                      transition:"opacity 0.2s",
+                    }} title={entry.name ? `${entry.name}${entry.isPopular ? ` — ${entry.pickRate}%` : ""}` : ""}>
+                      <img
+                        src={`https://ddragon.leagueoflegends.com/cdn/img/${entry.rune.icon}`}
+                        alt=""
+                        width={24}
+                        height={24}
+                        style={{
+                          borderRadius:"50%",
+                          border: entry.isPopular ? `2px solid ${sStyle.color}` : "1px solid transparent",
+                          background: entry.isPopular ? `${sStyle.color}22` : "transparent",
+                        }}
+                        onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.1"; }}
+                      />
+                      {entry.isPopular && (
+                        <span style={{fontSize:"0.5rem",color:"var(--muted)",marginTop:1,fontWeight:600}}>
+                          {entry.pickRate}%
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                  {si < 2 && (
+                    <div style={{height:4,opacity:0.1}}>
+                      <div style={{margin:"0 auto",width:1,height:"100%",background:sStyle.color}} />
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <span className="muted-sm">Árvore não encontrada</span>
+          )}
+        </div>
+      </div>
+
+      {/* Páginas de runa (SETs): SET 1 = a mais usada; SET 2-4 mantêm o keystone do SET 1 */}
+      {sets.length > 0 && (
+        <div style={{marginTop:"0.75rem"}}>
+          <span style={{fontSize:"0.62rem",color:"var(--muted)",display:"block",marginBottom:"0.35rem",textTransform:"uppercase",letterSpacing:"0.05em"}}>
+            Páginas de Runa
+          </span>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {sets.map((set, i) => {
+              const isActive = i === selectedSet;
+              const subInfo = RUNE_STYLE_IDS[set.subStyleId] ?? { name: `#${set.subStyleId}`, color: "#888" };
+              const ksIcon = runeMap.get(set.keystoneId)?.icon;
+              return (
+                <button key={i} onClick={() => setSelectedSet(i)} style={{
+                  display:"flex",flexDirection:"column",gap:5,
+                  padding:"0.45rem 0.6rem",borderRadius:8,minWidth:150,
+                  border: isActive ? `1.5px solid ${pStyle.color}` : "1px solid var(--border)",
+                  background: isActive ? `${pStyle.color}12` : "var(--panel)",
+                  opacity: isActive ? 1 : 0.7, cursor:"pointer",
+                }}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,width:"100%"}}>
+                    <span style={{fontWeight:700,fontSize:"0.7rem",color: isActive ? pStyle.color : "var(--text)"}}>SET {i + 1}</span>
+                    <span style={{display:"flex",gap:6,alignItems:"center",fontSize:"0.62rem"}}>
+                      <span className="pick-rate-badge">{set.pickRate}%</span>
+                      <WRBadge wr={set.winRate} />
+                    </span>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:3}}>
+                    {ksIcon && (
+                      <img src={`${DD_RUNE}/${ksIcon}`} alt="" width={22} height={22}
+                        style={{borderRadius:"50%",border:`1.5px solid ${pStyle.color}`}}
+                        onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.1"; }} />
+                    )}
+                    {set.primaryRunes.map((id) => {
+                      const ic = runeMap.get(id)?.icon;
+                      return ic ? (
+                        <img key={id} src={`${DD_RUNE}/${ic}`} alt="" width={16} height={16}
+                          style={{borderRadius:"50%",opacity:0.95}}
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.1"; }} />
+                      ) : null;
+                    })}
+                    <span style={{width:1,height:16,background:"var(--border)",margin:"0 3px"}} />
+                    {set.subRunes.map((id) => {
+                      const ic = runeMap.get(id)?.icon;
+                      return ic ? (
+                        <img key={id} src={`${DD_RUNE}/${ic}`} alt="" width={16} height={16}
+                          style={{borderRadius:"50%",border:`1px solid ${subInfo.color}`,opacity:0.95}}
+                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = "0.1"; }} />
+                      ) : null;
+                    })}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SkillOrderVisual({ order }: { order: string }) {
+  if (!order) return <span className="muted-sm">—</span>;
+  return (
+    <div style={{display:"flex",gap:2,flexWrap:"wrap",maxWidth:340}}>
+      {order.split("").map((letter, i) => (
+        <span key={i} style={{
+          display:"inline-flex",alignItems:"center",justifyContent:"center",
+          width:18,height:18,borderRadius:3,
+          fontSize:"0.62rem",fontWeight:700,
+          background: ABILITY_COLORS[letter] || "var(--panel)",
+          color: ABILITY_COLORS[letter] ? "#fff" : "var(--muted)",
+          border: `1px solid ${ABILITY_COLORS[letter] || "var(--border)"}55`,
+        }}>
+          {letter}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function MatchDetail({ match, champId, onClose, runeMap }: {
+  match: MatchEntry; champId: string; onClose: () => void;
+  runeMap: Map<number, { name: string; icon: string }>;
+}) {
+  // Usa participantes REAIS quando disponiveis, senao fallback mock
+  const mExt = match as MatchEntry & { allParticipants?: Array<{summonerName:string;tagLine:string;championId:string;teamId:number;win:boolean;puuid:string}> };
+  const hasRealPlayers = mExt.allParticipants && mExt.allParticipants.length === 10;
+
+  let allyTeam: Array<{ name: string; tagLine: string; champId: string }> = [];
+  let enemyTeam: Array<{ name: string; tagLine: string; champId: string }> = [];
+
+  if (hasRealPlayers) {
+    const myTeamId = mExt.allParticipants!.find((p) => p.championId.toLowerCase() === champId.toLowerCase())?.teamId;
+    allyTeam = mExt.allParticipants!.filter((p) => p.teamId === myTeamId).map((p) => ({
+      name: p.summonerName || "Invocador",
+      tagLine: p.tagLine || "",
+      champId: p.championId,
+    }));
+    enemyTeam = mExt.allParticipants!.filter((p) => p.teamId !== myTeamId).map((p) => ({
+      name: p.summonerName || "Invocador",
+      tagLine: p.tagLine || "",
+      champId: p.championId,
+    }));
+  } else {
+    // Fallback mock
+    const seed = match.matchId.charCodeAt(match.matchId.length-1);
+    const allyPool = ["Lee Sin","Viego","Sejuani","Jarvan IV","Xin Zhao","Ahri","Syndra","Orianna","Jinx","Caitlyn","Nautilus","Thresh","Lulu","Braum"];
+    const enemyPool = ["Darius","K'Sante","Renekton","Garen","Zed","Akali","LeBlanc","Fizz","Vayne","Draven","Leona","Blitzcrank","Pyke","Morgana"];
+    function pick(arr: string[], idx: number) { return arr[idx % arr.length]; }
+    allyTeam = [
+      { name: match.summonerName, tagLine: match.tagLine || "", champId },
+      { name: "AliadoJG",  tagLine: "", champId: pick(allyPool, seed+1) },
+      { name: "AliadoMid", tagLine: "", champId: pick(allyPool, seed+2) },
+      { name: "AliadoADC", tagLine: "", champId: pick(allyPool, seed+3) },
+      { name: "AliadoSup", tagLine: "", champId: pick(allyPool, seed+4) },
+    ];
+    enemyTeam = [
+      { name: "InimigoTop", tagLine: "", champId: pick(enemyPool, seed+5) },
+      { name: "InimigoJG",  tagLine: "", champId: pick(enemyPool, seed+6) },
+      { name: "InimigoMid", tagLine: "", champId: pick(enemyPool, seed+7) },
+      { name: "InimigoADC", tagLine: "", champId: pick(enemyPool, seed+8) },
+      { name: "InimigoSup", tagLine: "", champId: pick(enemyPool, seed+9) },
+    ];
+  }
 
   return (
     <div className="match-detail-panel">
@@ -919,18 +1182,67 @@ function MatchDetail({ match, champId, onClose }: { match: MatchEntry; champId: 
       <div className="match-teams-grid">
         <div className="match-team">
           <h5 style={{color:"#1a9e6e",margin:"0 0 0.4rem",fontSize:"0.78rem"}}>🟢 Aliados</h5>
-          {allyTeam.map((p,i)=>(<div key={i} className="match-team-row"><ChampIcon champId={p.champId} size={24}/><span style={{fontSize:"0.72rem"}}>{p.name}</span><span style={{marginLeft:"auto",fontSize:"0.62rem",color:"var(--muted)"}}>{p.champId}</span></div>))}
+          {allyTeam.map((p,i)=>(<div key={i} className="match-team-row"><ChampIcon champId={p.champId} size={24}/><span style={{fontSize:"0.72rem"}}>{p.name}{p.tagLine ? <span style={{fontSize:"0.6rem",color:"var(--muted)",marginLeft:3}}>#{p.tagLine}</span> : null}</span><span style={{marginLeft:"auto",fontSize:"0.62rem",color:"var(--muted)"}}>{p.champId}</span></div>))}
         </div>
         <div className="match-team">
           <h5 style={{color:"#e84057",margin:"0 0 0.4rem",fontSize:"0.78rem"}}>🔴 Inimigos</h5>
-          {enemyTeam.map((p,i)=>(<div key={i} className="match-team-row"><ChampIcon champId={p.champId} size={24}/><span style={{fontSize:"0.72rem"}}>{p.name}</span><span style={{marginLeft:"auto",fontSize:"0.62rem",color:"var(--muted)"}}>{p.champId}</span></div>))}
+          {enemyTeam.map((p,i)=>(<div key={i} className="match-team-row"><ChampIcon champId={p.champId} size={24}/><span style={{fontSize:"0.72rem"}}>{p.name}{p.tagLine ? <span style={{fontSize:"0.6rem",color:"var(--muted)",marginLeft:3}}>#{p.tagLine}</span> : null}</span><span style={{marginLeft:"auto",fontSize:"0.62rem",color:"var(--muted)"}}>{p.champId}</span></div>))}
         </div>
       </div>
       <div className="match-detail-build">
-        <div><strong>Itens:</strong> <div className="match-items-row">{match.items.map((id,j)=><ItemIcon key={j} id={id} size={28}/>)}</div></div>
-        <div><strong>Runas:</strong> {match.runes.keystone} ({match.runes.primary}/{match.runes.secondary})</div>
-        <div><strong>Feitiços:</strong> {match.summonerSpells.join(" + ")}</div>
-        <div><strong>Ordem:</strong> {match.skillOrder}</div>
+        {/* Itens */}
+        <div style={{marginBottom:"0.5rem"}}>
+          <strong style={{fontSize:"0.72rem",display:"block",marginBottom:"0.25rem"}}>Itens</strong>
+          <div className="match-items-row" style={{gap:4}}>
+            {match.items.map((id,j) => (
+              id === "0" || !id
+                ? <div key={j} style={{width:28,height:28,borderRadius:4,background:"var(--panel)",border:"1px solid var(--border)"}} />
+                : <ItemIcon key={j} id={id} size={28} />
+            ))}
+          </div>
+        </div>
+
+        {/* Feitiços */}
+        <div style={{marginBottom:"0.5rem"}}>
+          <strong style={{fontSize:"0.72rem",display:"block",marginBottom:"0.25rem"}}>Feitiços</strong>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {match.summonerSpells.map((sid, j) => (
+              <SpellIconById key={j} spellId={sid} size={28} />
+            ))}
+          </div>
+        </div>
+
+        {/* Runas */}
+        <div style={{marginBottom:"0.5rem"}}>
+          <strong style={{fontSize:"0.72rem",display:"block",marginBottom:"0.25rem"}}>Runas</strong>
+          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+            {/* Keystone */}
+            {(() => {
+              const r = match.runes as Record<string, unknown>;
+              const ksId = (r.primaryRuneId as number) || Number(r.keystone) || 0;
+              const ks = runeMap.get(ksId);
+              const pStyle = RUNE_STYLE_IDS[(r.primaryStyle as number) || Number(r.primary) || 0];
+              const sStyle = RUNE_STYLE_IDS[(r.subStyle as number) || Number(r.secondary) || 0];
+              return (
+                <>
+                  {ks && <RuneIcon path={ks.icon} size={28} />}
+                  <span style={{fontSize:"0.68rem"}}>
+                    {ks?.name ?? `Runa #${ksId}`}
+                    <span style={{color:"var(--muted)",marginLeft:4}}>
+                      {pStyle?.name ?? "·"} / {sStyle?.name ?? "·"}
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+
+        {/* Ordem de Skills */}
+        <div>
+          <strong style={{fontSize:"0.72rem",display:"block",marginBottom:"0.25rem"}}>Ordem de Habilidades</strong>
+          <SkillOrderVisual order={match.skillOrder} />
+        </div>
       </div>
     </div>
   );
@@ -1064,7 +1376,7 @@ function OneTricksTab({ buildData }: { buildData: ChampionBuildData }) {
             <div key={i} className="mastery-row">
               <div className="mastery-rank-num">#{i + 1}</div>
               <img
-                src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/profileicon/${entry.profileIconId}.png`}
+                src={`${DD_BASE}/img/profileicon/${entry.profileIconId}.png`}
                 alt={entry.summonerName} width={36} height={36} className="champ-icon-round"
               />
               <div className="mastery-info">
@@ -1234,6 +1546,9 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
   const urlLane = searchParams.get("lane") ?? "Todas";
   const [lane, setLane] = useState(urlLane);
 
+  // Modo de maestria: "all" = todos high elo, "otp" = 500k+
+  const [masteryMode, setMasteryMode] = useState<"all" | "otp">("all");
+
   // Região primária para chamadas à Riot API (primeiro servidor selecionado no filtro)
   const primaryRegion = useMemo(() => {
     const raw = searchParams.get("regions") ?? "all";
@@ -1258,9 +1573,9 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
       <ChampionHeader champ={champ} detail={detail} buildData={buildData} ddBase={ddBase} splashUrl={splashUrl} />
 
       <div className="champ-page-inner">
-        <DataSourceToggle label="Fonte dos dados" />
         <RegionFilter showLabel />
         <LaneFilter lane={lane} onChange={handleLaneChange} />
+        <MasteryModeToggle mode={masteryMode} onChange={setMasteryMode} />
 
         <AIAnalysis champId={champ.id} />
 
@@ -1280,10 +1595,9 @@ export function ChampionPageClient({ champ, detail, buildData, allChampions, ddB
         <AdBanner />
 
         {/* Tab content */}
-        <div className="champ-tab-content">
-          {normalizedTab === "Build" && <BuildTab buildData={buildData} detail={detail} ddBase={ddBase} region={primaryRegion} lane={lane} />}
+        <div className="champ-tab-content" key={`${normalizedTab}-${masteryMode}`}>
+          {normalizedTab === "Build" && <BuildTab buildData={buildData} detail={detail} ddBase={ddBase} region={primaryRegion} lane={lane} masteryMode={masteryMode} setMasteryMode={setMasteryMode} />}
           {normalizedTab === "Counters" && <CountersTab buildData={buildData} champName={champ.name} />}
-          {normalizedTab === "One Tricks" && <OneTricksTab buildData={buildData} />}
           {normalizedTab === "Pro Builds" && <ProBuildsTab champName={champ.name} />}
           {normalizedTab === "Guia" && <GuiaTab champName={champ.name} />}
         </div>

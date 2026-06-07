@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
 import type { SummonerProfile } from "@/lib/types";
-import { championIcon } from "@/lib/ddragon";
+import { championIcon, DD_BASE } from "@/lib/ddragon";
 
 const QUEUE_LABELS: Record<string, string> = {
   RANKED_SOLO_5x5: "Solo/Duo",
@@ -150,7 +150,7 @@ export function LobbyAnalysis() {
                 <div key={riotId} className="lobby-card">
                   <div className="lobby-card-header">
                     <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/profileicon/${profile.summoner.profileIconId}.png`}
+                      src={`${DD_BASE}/img/profileicon/${profile.summoner.profileIconId}.png`}
                       alt="icon"
                       width={44}
                       height={44}

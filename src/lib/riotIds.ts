@@ -1,6 +1,6 @@
-/**
+﻿/**
  * Mapeamentos estáticos de IDs da Riot API → nomes e ícones do Data Dragon.
- * Referência: https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/
+ * Referência: https://ddragon.leagueoflegends.com/cdn/16.11.1/data/pt_BR/
  */
 
 // ── Feitiços de Invocador ─────────────────────────────────────────────────────

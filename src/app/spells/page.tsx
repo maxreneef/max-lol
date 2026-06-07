@@ -1,11 +1,12 @@
-"use client";
+﻿"use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { PageWithAds } from "@/components/PageWithAds";
 import { AdBanner } from "@/components/AdUnit";
 
-const DD = "https://ddragon.leagueoflegends.com/cdn/15.11.1";
+const DD = DD_BASE;
 
 interface Spell {
   id: string;

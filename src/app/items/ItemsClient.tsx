@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useState, useMemo } from "react";
 
-const DD = "https://ddragon.leagueoflegends.com/cdn/15.11.1";
+const DD = DD_BASE;
 
 // ── Valores base de ouro por unidade de stat (Patch 15.11) ──────────────
 // Calculados a partir dos itens de componente básicos da Riot:

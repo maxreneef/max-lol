@@ -83,7 +83,6 @@ export async function getProfile(
   tagLine: string,
   platform: Platform
 ): Promise<SummonerProfile> {
-  // Sem chave configurada → retorna dados de demonstração para a UI funcionar.
   if (!API_KEY) {
     return mockProfile(gameName, tagLine, platform);
   }

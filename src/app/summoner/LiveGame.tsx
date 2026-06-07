@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { championIcon } from "@/lib/ddragon";
+import { championIcon, DD_BASE } from "@/lib/ddragon";
 import type { LiveGame } from "@/lib/types";
 
 const QUEUE_LABELS: Record<number, string> = {
@@ -19,7 +19,7 @@ async function loadChampMap() {
   if (Object.keys(champMap).length) return;
   try {
     const res = await fetch(
-      "https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/champion.json"
+      `${DD_BASE}/data/pt_BR/champion.json`
     );
     const json = await res.json();
     champMap = Object.fromEntries(

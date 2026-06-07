@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useState, useEffect, useRef, use } from "react";
 import Link from "next/link";
 import {
@@ -292,7 +293,7 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
 
           <div className="profile-header">
             <img
-              src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/profileicon/${profile.summoner.profileIconId}.png`}
+              src={`${DD_BASE}/img/profileicon/${profile.summoner.profileIconId}.png`}
               alt="Ícone"
               width={72} height={72}
               className="profile-icon"
@@ -393,7 +394,7 @@ export function SummonerSearch({ searchParamsPromise }: Props) {
                   >
                     <div className="match-result-bar" />
                     <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${s.championName}.png`}
+                      src={`${DD_BASE}/img/champion/${s.championName}.png`}
                       alt={s.championName}
                       width={44} height={44}
                       className="match-champ-icon"

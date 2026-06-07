@@ -1,4 +1,5 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
+import { DD_BASE } from "@/lib/ddragon";
 import { ItemsClient, type ItemData } from "./ItemsClient";
 import { PageWithAds } from "@/components/PageWithAds";
 import { AdBanner } from "@/components/AdUnit";
@@ -11,7 +12,7 @@ export const revalidate = 3600;
 
 async function fetchItems(): Promise<Record<string, ItemData>> {
   const res = await fetch(
-    "https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/item.json",
+    `${DD_BASE}/data/pt_BR/item.json`,
     { next: { revalidate: 3600 } }
   );
   const json = await res.json();

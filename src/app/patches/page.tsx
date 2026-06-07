@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+﻿import type { Metadata } from "next";
 import Link from "next/link";
 import { PageWithAds } from "@/components/PageWithAds";
 import { AdRect } from "@/components/AdUnit";
@@ -21,7 +21,7 @@ async function fetchVersions(): Promise<string[]> {
 }
 
 function versionToDate(version: string): string {
-  // Versões seguem o padrão YEAR.PATCH (ex: 15.11.1 = 2025, patch 11)
+  // Versões seguem o padrão YEAR.PATCH (ex: 16.11.1 = 2025, patch 11)
   const [year, patch] = version.split(".");
   return `Temporada ${year} · Patch ${patch}`;
 }

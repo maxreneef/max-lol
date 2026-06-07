@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useState } from "react";
 import Link from "next/link";
 import type { SummonerProfile, LeagueEntryDTO } from "@/lib/types";
@@ -140,7 +141,7 @@ export function CompareClient() {
                 <>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.75rem" }}>
                     <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/profileicon/${s.profile.summoner.profileIconId}.png`}
+                      src={`${DD_BASE}/img/profileicon/${s.profile.summoner.profileIconId}.png`}
                       width={56} height={56} alt="icon" className="profile-icon"
                     />
                     <div>

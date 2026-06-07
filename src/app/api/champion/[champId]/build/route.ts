@@ -10,8 +10,9 @@ export async function GET(
   { params }: { params: Promise<{ champId: string }> }
 ) {
   const { champId } = await params;
-  const region = req.nextUrl.searchParams.get("region") ?? "br1";
-  const lane   = req.nextUrl.searchParams.get("lane")   ?? "";
+  const region     = req.nextUrl.searchParams.get("region") ?? "br1";
+  const lane       = req.nextUrl.searchParams.get("lane")   ?? "";
+  const minMastery = req.nextUrl.searchParams.get("minMastery") ?? "0";
 
   if (!isPlatform(region)) {
     return NextResponse.json({ error: "Região inválida" }, { status: 400 });
@@ -24,19 +25,20 @@ export async function GET(
     });
   }
 
-  // Cache keyed por região + rota
-  const cacheKey = `champion-build-v2:${champId}:${region}:${lane}`;
+  // Cache keyed por região + rota + modo maestria
+  const cacheKey = `champion-build-v3:${champId}:${region}:${lane}:m${minMastery}`;
 
   try {
     const data = await cached(cacheKey, 10 * 60 * 1000, async () => {
       const host = req.headers.get("host") ?? "localhost:3000";
       const protocol = host.includes("localhost") ? "http" : "https";
 
-      // Repassa lane para a rota de matches
+      // Repassa lane e minMastery para a rota de matches
       const laneParam = lane ? `&lane=${encodeURIComponent(lane)}` : "";
+      const masteryParam = minMastery !== "0" ? `&minMastery=${minMastery}` : "";
       const matchesUrl =
         `${protocol}://${host}/api/champion/${encodeURIComponent(champId)}/matches` +
-        `?region=${encodeURIComponent(region)}${laneParam}`;
+        `?region=${encodeURIComponent(region)}${laneParam}${masteryParam}`;
 
       const matchesRes = await fetch(matchesUrl, {
         headers: { cookie: req.headers.get("cookie") ?? "" },

@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { ChampionMastery } from "@/lib/types";
@@ -8,7 +9,7 @@ let champKeyMap: Record<number, string> = {};
 async function loadChampKeyMap() {
   if (Object.keys(champKeyMap).length) return;
   try {
-    const res = await fetch("https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/champion.json");
+    const res = await fetch(`${DD_BASE}/data/pt_BR/champion.json`);
     const json = await res.json();
     champKeyMap = Object.fromEntries(
       Object.values(json.data as Record<string, { key: string; id: string }>).map((c) => [parseInt(c.key), c.id])
@@ -51,7 +52,7 @@ export function MasterySection({ puuid, region }: { puuid: string; region: strin
           return (
             <Link key={m.championId} href={`/champion/${champId}`} className="mastery-row">
               <img
-                src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${champId}.png`}
+                src={`${DD_BASE}/img/champion/${champId}.png`}
                 alt={champId}
                 width={40} height={40}
                 className="mastery-icon"

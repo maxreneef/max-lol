@@ -1,9 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PLATFORMS } from "@/lib/types";
-import { mockTierStats } from "@/lib/ddragon";
+import { mockTierStats, DD_BASE } from "@/lib/ddragon";
 
 interface FreeRotation {
   freeChampionIds: number[];
@@ -15,7 +15,7 @@ let champKeyMap: Record<number, { id: string; name: string }> = {};
 async function loadMap() {
   if (Object.keys(champKeyMap).length) return;
   try {
-    const res = await fetch("https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/champion.json");
+    const res = await fetch(`${DD_BASE}/data/pt_BR/champion.json`);
     const json = await res.json();
     champKeyMap = Object.fromEntries(
       Object.values(json.data as Record<string, { key: string; id: string; name: string }>).map((c) => [
@@ -80,7 +80,7 @@ export function RotationClient() {
               return (
                 <Link key={id} href={`/champion/${champ.id}`} className="rotation-card">
                   <img
-                    src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${champ.id}.png`}
+                    src={`${DD_BASE}/img/champion/${champ.id}.png`}
                     alt={champ.name}
                     width={64} height={64}
                     className="rotation-icon"
@@ -109,7 +109,7 @@ export function RotationClient() {
                   return (
                     <Link key={id} href={`/champion/${champ.id}`} className="rotation-card">
                       <img
-                        src={`https://ddragon.leagueoflegends.com/cdn/15.11.1/img/champion/${champ.id}.png`}
+                        src={`${DD_BASE}/img/champion/${champ.id}.png`}
                         alt={champ.name}
                         width={64} height={64}
                         className="rotation-icon"

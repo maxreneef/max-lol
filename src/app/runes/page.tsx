@@ -1,5 +1,6 @@
-"use client";
+﻿"use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { PageWithAds } from "@/components/PageWithAds";
@@ -19,7 +20,7 @@ export default function RunesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("https://ddragon.leagueoflegends.com/cdn/15.11.1/data/pt_BR/runesReforged.json")
+    fetch(`${DD_BASE}/data/pt_BR/runesReforged.json`)
       .then((r) => r.json())
       .then((data) => setTrees(data as RuneTree[]))
       .catch(() => {})

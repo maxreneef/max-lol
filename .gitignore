@@ -38,3 +38,11 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# notas de trabalho e scripts locais (contêm segredos / não vão para o repo público)
+/PROMPT_NOVA_SESSAO.md
+/RELATORIO.md
+/ESPECIFICACAO_BUILD_TAB.md
+/scan.ps1
+/scan_otp_init.ps1
+/vercel.json

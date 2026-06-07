@@ -1,5 +1,6 @@
 "use client";
 
+import { DD_BASE } from "@/lib/ddragon";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -105,7 +106,7 @@ export function MatchDetail() {
   );
 }
 
-const DD = "https://ddragon.leagueoflegends.com/cdn/15.11.1";
+const DD = DD_BASE;
 
 function ItemSlot({ itemId }: { itemId: number }) {
   if (!itemId) return <div className="item-slot empty" />;

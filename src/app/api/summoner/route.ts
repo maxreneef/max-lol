@@ -7,14 +7,15 @@ export async function GET(request: Request) {
   const riotId = (searchParams.get("riotId") ?? "").trim();
   const region = (searchParams.get("region") ?? "br1").trim();
 
+  if (!isPlatform(region)) {
+    return NextResponse.json({ error: "Região inválida." }, { status: 400 });
+  }
+
   if (!riotId.includes("#")) {
     return NextResponse.json(
       { error: 'Use o formato Nome#TAG (ex.: "Faker#KR1").' },
       { status: 400 }
     );
-  }
-  if (!isPlatform(region)) {
-    return NextResponse.json({ error: "Região inválida." }, { status: 400 });
   }
 
   const [gameName, tagLine] = riotId.split("#");

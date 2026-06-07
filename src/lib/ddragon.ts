@@ -1,5 +1,5 @@
 // Data Dragon helpers — sem API key, dados públicos da Riot
-export const DD_VERSION = "15.11.1";
+export const DD_VERSION = "16.11.1";
 export const DD_BASE = `https://ddragon.leagueoflegends.com/cdn/${DD_VERSION}`;
 
 export function championIcon(name: string) {
@@ -140,7 +140,7 @@ export async function fetchRuneData(): Promise<Map<number, { name: string; icon:
         for (const rune of slot.runes) {
           map.set(rune.id, {
             name: rune.name,
-            icon: `perk-images/Styles/${tree.key}/${rune.key}/${rune.key}.png`,
+            icon: rune.icon, // Usa o caminho oficial do DDragon (ex: DEATHFIRE_TOUCH_KEYSTONE.png)
           });
         }
       }
