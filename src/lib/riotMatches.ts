@@ -50,7 +50,7 @@ export function hosts(platform: string) {
  */
 export async function riotFetch(
   url: string,
-  opts?: { useCache?: boolean; retries?: number }
+  opts?: { useCache?: boolean; retries?: number; revalidate?: number }
 ): Promise<Response> {
   const useCache = opts?.useCache ?? true;
   const maxRetries = opts?.retries ?? 3;
@@ -62,10 +62,9 @@ export async function riotFetch(
       const fetchOpts: RequestInit = {
         headers: { "X-Riot-Token": API_KEY! },
       };
-      // NEXT: useCache=true → cache longo (30 min) para leituras do site.
-      // useCache=false → cache curto (2 min) para scans: evita rate limit sem envenenar
-      // o cache de longo prazo com dados potencialmente inconsistentes.
-      const revalidate = useCache ? REVALIDATE : 120; // 2 min para scans
+      // Se revalidate explícito foi passado, usa ele. Senão:
+      // useCache=true → 30 min (leituras do site). useCache=false → 2 min (scans).
+      const revalidate = opts?.revalidate ?? (useCache ? REVALIDATE : 120);
       (fetchOpts as Record<string, unknown>).next = { revalidate };
 
       const res = await fetch(url, fetchOpts);
