@@ -20,10 +20,10 @@ const CRON_SECRET = process.env.CRON_SECRET;
 const API_KEY = process.env.RIOT_API_KEY;
 
 // Orçamento por execução (dev key = 100 req/2min):
-//   Leaderboard ~28 chamadas (cache 30min) + match IDs ~10 + detalhes ~20 + mastery ~10 = ~68
-//   Com cache 24h nos detalhes (imutáveis), chamadas reais caem pra ~38 por execução.
-const SCAN_PLAYERS = 10; // jogadores do leaderboard processados por execução
-const DETAIL_LIMIT = 10; // partidas NOVAS baixadas por execução
+//   Com cache 24h nos detalhes (imutáveis) e 30min no leaderboard/mastery,
+//   ~68 chamadas reais na primeira execução, ~10 nas seguintes. Cabe folgado.
+const SCAN_PLAYERS = 15; // jogadores do leaderboard processados por execução
+const DETAIL_LIMIT = 30; // partidas NOVAS baixadas por execução
 const MATCH_IDS_PER = 20;
 const OTP_THRESHOLD = 500_000;
 
