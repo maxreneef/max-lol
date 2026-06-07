@@ -44,8 +44,9 @@ export function hosts(platform: string) {
  * - Erros 5xx: até 3 retentativas com backoff exponencial (1s, 2s, 4s).
  * - Erro 429 (rate limit): espera o Retry-After header ou 10s e tenta de novo (até 3x).
  * - Erros 4xx (fora 429): NÃO retenta — falha imediata.
- * - `useCache`: quando false, NÃO usa next.revalidate (scan/robô). Quando true (default),
- *   usa cache Data Cache do Next.js (30 min) para leituras do site.
+ * - `useCache`: quando true (default), usa cache Data Cache do Next.js (30 min) para leituras
+ *   do site. Quando false (scan/robô), usa cache curto de 2 min — evita rate limit do scan
+ *   sem envenenar o cache de longo prazo com dados potencialmente inconsistentes.
  */
 export async function riotFetch(
   url: string,
@@ -61,13 +62,11 @@ export async function riotFetch(
       const fetchOpts: RequestInit = {
         headers: { "X-Riot-Token": API_KEY! },
       };
-      // NEXT: só usa cache de 30 min quando useCache=true (leituras do client).
-      // O scan/robô SEMPRE passa useCache=false para não envenenar o cache com erros.
-      if (useCache) {
-        (fetchOpts as Record<string, unknown>).next = { revalidate: REVALIDATE };
-      } else {
-        (fetchOpts as Record<string, unknown>).cache = "no-store";
-      }
+      // NEXT: useCache=true → cache longo (30 min) para leituras do site.
+      // useCache=false → cache curto (2 min) para scans: evita rate limit sem envenenar
+      // o cache de longo prazo com dados potencialmente inconsistentes.
+      const revalidate = useCache ? REVALIDATE : 120; // 2 min para scans
+      (fetchOpts as Record<string, unknown>).next = { revalidate };
 
       const res = await fetch(url, fetchOpts);
 
