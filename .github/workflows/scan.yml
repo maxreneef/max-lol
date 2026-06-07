@@ -1,0 +1,67 @@
+name: Scan High Elo (5 servidores)
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # a cada 5 minutos
+  workflow_dispatch:         # permite rodar manualmente
+
+jobs:
+  br1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan BR1
+        run: |
+          for i in $(seq 1 5); do
+            echo "[$(date +%H:%M:%S)] BR1 — scan $i/5"
+            curl -s -m 60 "https://max-lol.vercel.app/api/cron/scan?region=br1"
+            echo ""
+            sleep 10
+          done
+
+  na1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan NA1
+        run: |
+          for i in $(seq 1 5); do
+            echo "[$(date +%H:%M:%S)] NA1 — scan $i/5"
+            curl -s -m 60 "https://max-lol.vercel.app/api/cron/scan?region=na1"
+            echo ""
+            sleep 10
+          done
+
+  euw1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan EUW1
+        run: |
+          for i in $(seq 1 5); do
+            echo "[$(date +%H:%M:%S)] EUW1 — scan $i/5"
+            curl -s -m 60 "https://max-lol.vercel.app/api/cron/scan?region=euw1"
+            echo ""
+            sleep 10
+          done
+
+  eun1:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan EUN1
+        run: |
+          for i in $(seq 1 5); do
+            echo "[$(date +%H:%M:%S)] EUN1 — scan $i/5"
+            curl -s -m 60 "https://max-lol.vercel.app/api/cron/scan?region=eun1"
+            echo ""
+            sleep 10
+          done
+
+  kr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan KR
+        run: |
+          for i in $(seq 1 5); do
+            echo "[$(date +%H:%M:%S)] KR — scan $i/5"
+            curl -s -m 60 "https://max-lol.vercel.app/api/cron/scan?region=kr"
+            echo ""
+            sleep 10
+          done
